@@ -1,1 +1,1 @@
-# Hybrid-Inference-Scheme
+# Hybrid Inference Scheme
