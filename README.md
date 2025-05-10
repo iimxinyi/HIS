@@ -221,9 +221,9 @@ Personal prompt: `A fluffy white cat with blue eyes sitting gracefully on a wind
 Among the above schemes, our proposed Hybrid Inference Scheme (HIS) demonstrates superior performance by maintaining high perceptual quality even when the common inference step is set to a large value.
 This effectively overcomes a key limitation reported in prior work [2], where the common inference step is typically restricted to one-third of total number of inference steps.
 
-[1] G. Xie *et al.*, ``GAI-IoV: Bridging generative AI and vehicular networks for ubiquitous edge intelligence,'' *IEEE Trans. Wireless Commun.*, vol. 23, no. 10, pp. 12799-12814, Oct. 2024.
+[1] G. Xie *et al.*, "GAI-IoV: Bridging generative AI and vehicular networks for ubiquitous edge intelligence," *IEEE Trans. Wireless Commun.*, vol. 23, no. 10, pp. 12799-12814, Oct. 2024.
 
-[2] H. Du *et al.*, ``User-centric interactive AI for distributed diffusion model-based AI-generated content,'' 2023, *arXiv:2311.11094*.
+[2] H. Du *et al.*, "User-centric interactive AI for distributed diffusion model-based AI-generated content," 2023, *arXiv:2311.11094*.
 
 
 ## 8 Acknowledge
