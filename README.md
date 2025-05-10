@@ -214,16 +214,16 @@ z: common inference step
 ## 7 Case Study
 ![image](/Files/CaseStudy.png)
 
-Public prompt: A graceful cat sitting in a warm and story-rich environment, highlighting its silky fur.
+Public prompt: `A graceful cat sitting in a warm and story-rich environment, highlighting its silky fur.`
 
-Personal prompt: A fluffy white cat with blue eyes sitting gracefully on a windowsill, bathed in golden sunlight, with a serene garden visible through the window.
+Personal prompt: `A fluffy white cat with blue eyes sitting gracefully on a windowsill, bathed in golden sunlight, with a serene garden visible through the window.`
 
 Among the above schemes, our proposed Hybrid Inference Scheme (HIS) demonstrates superior performance by maintaining high perceptual quality even when the common inference step is set to a large value.
 This effectively overcomes a key limitation reported in prior work [2], where the common inference step is typically restricted to one-third of total number of inference steps.
 
-[1] G. Xie \emph{et al.}, ``GAI-IoV: Bridging generative AI and vehicular networks for ubiquitous edge intelligence,'' \emph{IEEE Trans. Wireless Commun.}, vol. 23, no. 10, pp. 12799-12814, Oct. 2024.
+[1] G. Xie *et al.*, ``GAI-IoV: Bridging generative AI and vehicular networks for ubiquitous edge intelligence,'' *IEEE Trans. Wireless Commun.*, vol. 23, no. 10, pp. 12799-12814, Oct. 2024.
 
-[2] H. Du \emph{et al.}, ``User-centric interactive AI for distributed diffusion model-based AI-generated content,'' 2023, \emph{arXiv:2311.11094}.
+[2] H. Du *et al.*, ``User-centric interactive AI for distributed diffusion model-based AI-generated content,'' 2023, *arXiv:2311.11094}*.
 
 
 
