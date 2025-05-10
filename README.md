@@ -129,11 +129,19 @@ Replace `pipeline_stable_diffusion.py` with the file of the same name from this 
 
 `pipeline_stable_diffusion.py`: 
 
-In line 668, the parameter "num_inference_steps" is the total number of inference steps used to generate a satisfied image.
+In line 664, the parameter "prompt" is the positive personal prompt (i.e., the user-provided prompt).
 
-In line 688, the parameter "common_step" is the number of common inference steps (i.e., the shared steps).
+In line 669, the parameter "num_inference_steps" is the total number of inference steps used to generate a satisfied image.
 
-In line 689, "prompt_unchanged" is True if there is no common inference phase, and vice versa.
+In line 671, the parameter "guidance_scale" is the guidance scale in our proposed Semantic Intensity Modulator (SIM).
+
+In line 672, the parameter "negative_prompt" is the negative personal prompt in our proposed Negative Prompt Injecor (NPI).
+
+In line 689, the parameter "common_step" is the number of common inference steps (i.e., the shared steps).
+
+In line 690, the parameter "prompt_unchanged" is True if there is no common inference phase, and vice versa.
+
+In line 691, the parameter "get_intermediate_result" is True if you want to get the intermediate image in each inference step.
 
 `Promps_Similarity.py`:
 
