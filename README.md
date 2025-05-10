@@ -42,7 +42,7 @@ pip install openai-clip==1.0.1
 pip install torchvision==0.19.1
 pip install openpyxl==3.1.5
 ```
-Then you should get an env like:
+Then you should get an env. like:
 ```shell
 Package                  Version
 ------------------------ --------------------
