@@ -147,12 +147,10 @@ In line 691, the parameter "get_intermediate_result" is True if you want to get 
 
 `1-Get-Figures`:
 
-Get the similarity score between the public and personal prompts.
+Used to generate images for evaluating the effectiveness of individual design elements.
 
-`Experiment1.py`, `Experiment2.py`, `Experiment3.py`, `Experiment4.py`, `Experiment5.py`:
+`2-SIM-NPG-CLIP`:
 
-Get the generated images with varying common inference steps and varying similarity.
+Used to calculate the alignment score in the SIM and NPI.
 
-`CLIP_Score.py`:
-
-Calculate the CLIP score to evaluated the image quality.
+`3-SIM-NPG-BRISQUE`:
