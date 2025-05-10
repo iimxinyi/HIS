@@ -118,7 +118,7 @@ Open `Demo.py` in your code editor.
 
 Hold down the `ctrl` key if you are on Linux or Windows, or the `command` key if you are on MacOS, and click on StableDiffusion3Pipeline.
 
-![image](/readme/modify.png)
+![image](/Files/modify.png)
 
 This will navigate to the file `pipeline_stable_diffusion_3.py`.
 
