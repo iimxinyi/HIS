@@ -127,6 +127,8 @@ Replace `pipeline_stable_diffusion.py` with the file of the same name from this 
 
 ## 5 Explanation of Our Code Files
 
+To avoid confusion, we rewrite the Negative Prompt Generator (NPG) in our code files as the NPI in our paper, which means the same thing.
+
 `pipeline_stable_diffusion.py`: 
 
 In line 664, the parameter "prompt" is the positive personal prompt (i.e., the user-provided prompt).
@@ -143,7 +145,7 @@ In line 690, the parameter "prompt_unchanged" is True if there is no common infe
 
 In line 691, the parameter "get_intermediate_result" is True if you want to get the intermediate image in each inference step.
 
-`Promps_Similarity.py`:
+`1-Get-Figures`:
 
 Get the similarity score between the public and personal prompts.
 
