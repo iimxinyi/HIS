@@ -231,7 +231,7 @@ This effectively overcomes a key limitation reported in prior work [2], where th
 
 [CLIP](https://openai.com/index/clip/): It is a neural network that connects text and images.
 
-[BRISQUE]()
+[BRISQUE](https://piq.readthedocs.io/en/latest/usage_examples.html): It is a classical image quality assessment model.
 
 [Sentence-Transformer](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2): It maps sentences & paragraphs to a 384 dimensional dense vector space and can be used for tasks like clustering or semantic search.
 
