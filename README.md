@@ -174,6 +174,41 @@ Used to fit the HIQM function.
 
 ## 6 Explanation of Our Results
 
+Our generated image is available in:
+
+OneDrive: 
+
+Baidu Netdisk: 
+
+Image naming rules for the SIM：
+
+```shell
+scalex_prompty_seedz_wNPG/woNPG.png
+x: guidance scale index
+y: personal prompt index
+z: seed index
+wNPG: the NPI is enabled
+woNPG: the NPI is not enabled
+```
+
+Image naming rules for the NPI：
+
+```shell
+promptx_seedy_wNPG/woNPG.png
+x: personal prompt index
+y: seed index
+wNPG: the NPI is enabled
+woNPG: the NPI is not enabled
+```
+
+Image naming rules for the HIQM (i.e., similarity)：
+
+```shell
+Publicx_Personaly_CommonStepz.png
+x: public prompt index
+y: personal prompt index
+z: common inference step
+```
 
 
 
