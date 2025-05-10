@@ -112,3 +112,14 @@ wheel                    0.45.1
 yacs                     0.1.8
 zipp                     3.21.0
 ```
+
+## 4 Locate and Modify StableDiffusion3Pipeline
+Open `Demo.py` in your code editor.
+
+Hold down the `ctrl` key if you are on Linux or Windows, or the `command` key if you are on MacOS, and click on StableDiffusion3Pipeline.
+
+![image](/readme/modify.png)
+
+This will navigate to the file `pipeline_stable_diffusion_3.py`.
+
+Replace `pipeline_stable_diffusion.py` with the file of the same name from this repository.
