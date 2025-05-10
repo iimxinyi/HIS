@@ -154,3 +154,27 @@ Used to generate images for evaluating the effectiveness of individual design el
 Used to calculate the alignment score in the SIM and NPI.
 
 `3-SIM-NPG-BRISQUE`:
+
+Used to calculate the fidelity score in the SIM and NPI.
+
+`4-Similarity-Sentence`:
+
+Used to calculate the similarity score between the public and personal prompts.
+
+`5-Similarity-CLIP`:
+
+Used to calculate the image quality in our proposed Hybrid Inference Quality Metric (HIQM).
+
+`6-Similarity-Fitting`:
+
+Used to fit the HIQM function.
+
+
+## 6 Explanation of Our Results
+
+
+
+
+
+
+
