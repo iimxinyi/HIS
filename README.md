@@ -178,7 +178,7 @@ Our generated image is available in:
 
 OneDrive: 
 
-Baidu Netdisk: 
+Baidu Netdisk: 链接: https://pan.baidu.com/s/1XxX9jkjTRDss4y1_gPhoaw 提取码: p5n3
 
 Image naming rules for the SIM：
 
