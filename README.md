@@ -1,8 +1,8 @@
 # Hybrid Inference Scheme (HIS)
 
-**Target:** The aim is to explore the objective image quality and also the misalignment between users' intentions and the generated contents, with a focus on guiding the design of an efficient hybrid inference scheme.
+**Target:** The aim is to explore the image quality and also the misalignment between users' intentions and the generated contents, with a focus on guiding the design of an efficient hybrid inference scheme.
 
-**Paper:** "Diffusion-Based Hybrid Inference in MEC-Enabled AI-Generated Content Networks" --submitted to IEEE Journal on Selected Areas in Communications (IEEE JSAC)
+**Paper:** "A Novel Hybrid Inference Scheme for Diffusion-Based AIGC Services" --submitted to IEEE Journal on Selected Areas in Communications (IEEE JSAC)
 
 **Experimental Platform:** Our experiments are performed on an Ubuntu 20.04 system equipped with an Intel Xeon Gold 6248R CPU and an NVIDIA A100 GPU.
 
