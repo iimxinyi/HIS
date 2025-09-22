@@ -161,7 +161,7 @@ Used to calculate the fidelity score in the SIM and NPI.
 
 `4-Similarity-Sentence`:
 
-Used to calculate the similarity score between the public and personal prompts.
+Used to calculate the similarity score between public and personal prompts.
 
 `5-Similarity-CLIP`:
 
@@ -176,9 +176,15 @@ Used to fit the HIQM function.
 
 Our generated image is available in:
 
-OneDrive: Part I: https://stuhiteducn-my.sharepoint.com/:f:/g/personal/zhuangxinyi_stu_hit_edu_cn/EozI6f2Kk2hLvIy3LWZYi6MBIaAvfO2cfI1rwI7bwuBpEw?e=WVSgdM Part II: https://mailnwpueducn-my.sharepoint.com/:f:/g/personal/zhuangxinyi_mail_nwpu_edu_cn/EuXIlVa1mT1OoNzKoJNxzaMBTOdI5j3ktjoiFCE74ML8Fg?e=s5jkWu
+OneDrive: 
 
-Baidu Netdisk: 链接: https://pan.baidu.com/s/1XxX9jkjTRDss4y1_gPhoaw 提取码: p5n3
+Part I: https://stuhiteducn-my.sharepoint.com/:f:/g/personal/zhuangxinyi_stu_hit_edu_cn/EozI6f2Kk2hLvIy3LWZYi6MBIaAvfO2cfI1rwI7bwuBpEw?e=WVSgdM
+
+Part II: https://mailnwpueducn-my.sharepoint.com/:f:/g/personal/zhuangxinyi_mail_nwpu_edu_cn/EuXIlVa1mT1OoNzKoJNxzaMBTOdI5j3ktjoiFCE74ML8Fg?e=s5jkWu
+
+Baidu Netdisk: 
+
+Link: https://pan.baidu.com/s/1XxX9jkjTRDss4y1_gPhoaw   Extraction code: p5n3
 
 Image naming rules for the SIM：
 
@@ -223,7 +229,7 @@ This effectively overcomes a key limitation reported in prior work [2], where th
 
 [1] G. Xie *et al.*, "GAI-IoV: Bridging generative AI and vehicular networks for ubiquitous edge intelligence," *IEEE Trans. Wireless Commun.*, vol. 23, no. 10, pp. 12799-12814, Oct. 2024.
 
-[2] H. Du *et al.*, "User-centric interactive AI for distributed diffusion model-based AI-generated content," 2023, *arXiv:2311.11094*.
+[2] H. Du *et al.*, "Reinforcement learning with LLMs interaction for distributed diffusion model services," *IEEE Trans. Pattern Anal. Mach. Intell.*, vol. 47, no. 10, pp. 8838-8855, Oct. 2025.
 
 
 ## 8 Acknowledge
@@ -236,8 +242,6 @@ This effectively overcomes a key limitation reported in prior work [2], where th
 [Sentence-Transformer](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2): It maps sentences & paragraphs to a 384 dimensional dense vector space and can be used for tasks like clustering or semantic search.
 
 [DistributedDiffusion](https://github.com/HongyangDu/DistributedDiffusion): It is the first work on inference sharing in wireless networks.
-
-Thanks to all my partners!
 
 If you have any confusion, please feel free to contact us!
 
