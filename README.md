@@ -1,8 +1,8 @@
 # Hybrid Inference Scheme (HIS)
 
-**Target:** The aim is to explore the image quality and also the misalignment between users' intentions and the generated contents, with a focus on guiding the design of an efficient hybrid inference scheme.
+**Target:** The aim is to explore the image quality and also the misalignment between users' intentions and the corresponding generated content, with a focus on guiding the design of an efficient hybrid inference scheme.
 
-**Paper:** "A Novel Hybrid Inference Scheme for Diffusion-Based AIGC Services" --submitted to IEEE Journal on Selected Areas in Communications (IEEE JSAC)
+**Paper:** "A Novel Hybrid Inference Scheme for Diffusion-Based AIGC Services" --submitted to IEEE Transactions on Mobile Computing (IEEE TMC).
 
 **Experimental Platform:** Our experiments are performed on an Ubuntu 20.04 system equipped with an Intel Xeon Gold 6248R CPU and an NVIDIA A100 GPU.
 
@@ -129,7 +129,7 @@ Replace `pipeline_stable_diffusion.py` with the file of the same name from this 
 
 ## 5 Explanation of Our Code Files
 
-To avoid confusion, we rewrite the Negative Prompt Generator (NPG) in our code files as the NPI in our paper, which means the same thing.
+**Note:** We rewrite the Negative Prompt Generator (NPG) in our code files as the NPI in our paper, which means the same thing.
 
 `pipeline_stable_diffusion.py`: 
 
