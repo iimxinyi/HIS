@@ -151,11 +151,11 @@ In line 691, the parameter "get_intermediate_result" is True if you want to get 
 
 Used to generate images for evaluating the effectiveness of individual design elements.
 
-`2-SIM-NPG-CLIP`:
+`2-SIM-NPI-CLIP`:
 
 Used to calculate the alignment score in the SIM and NPI.
 
-`3-SIM-NPG-BRISQUE`:
+`3-SIM-NPI-BRISQUE`:
 
 Used to calculate the fidelity score in the SIM and NPI.
 
