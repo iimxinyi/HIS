@@ -2,7 +2,7 @@
 
 **Target:** The aim is to explore the image quality and also the misalignment between users' intentions and the corresponding generated content, with a focus on guiding the design of an efficient hybrid inference scheme.
 
-**Paper:** "When AIGC Meets MEC: A Novel Diffusion-based Collaborative Inference Paradigm" --submitted to IEEE Transactions on Mobile Computing (IEEE TMC).
+**Paper:** "A Novel Hybrid Inference Scheme for Diffusion-Based AIGC Services in MEC Networks" --submitted to IEEE Transactions on Mobile Computing (IEEE TMC).
 
 **Experimental Platform:** Our experiments are performed on an Ubuntu 20.04 system equipped with an Intel Xeon Gold 6248R CPU and an NVIDIA A100 GPU.
 
