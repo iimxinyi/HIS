@@ -14,7 +14,7 @@
 Create a new conda environment.
 
 ```shell
-conda create --name LVM python==3.10
+conda create --name LVM python=3.10
 ```
 
 
