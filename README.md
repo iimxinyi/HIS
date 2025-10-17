@@ -23,7 +23,7 @@ conda create --name LVM python=3.10
 Activate the created environment.
 
 ```shell
-source activate LVM
+conda activate LVM
 ```
 
 
