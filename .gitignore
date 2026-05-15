@@ -1,2 +1,16 @@
 assets/
 supplementary/
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+build/
+dist/
+wheels/
+*.egg-info/
+*.egg
+
+# Virtual environments (uv / venv)
+.venv/
+venv/
+.env/
