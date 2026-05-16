@@ -27,7 +27,7 @@ COPY . .
 
 RUN uv sync --no-install-project
 
-# Replace bundled SD3 pipeline with this repository’s modified version
+# Replace bundled SD3 + FLUX pipelines with this repository's modified versions
 RUN /app/.venv/bin/python - <<'PY'
 import pathlib
 import shutil
@@ -35,16 +35,21 @@ import shutil
 import diffusers
 
 root = pathlib.Path(diffusers.__file__).resolve().parent
-src = pathlib.Path("/app/sd3-medium/pipeline_stable_diffusion_3.py")
-matches = sorted(root.glob("**/pipeline_stable_diffusion_3.py"))
-if not matches:
-    raise SystemExit("diffusers: pipeline_stable_diffusion_3.py not found")
-dst = matches[0]
-shutil.copy(src, dst)
-print("patched", dst)
+patches = [
+    ("/app/sd3-medium/pipeline_stable_diffusion_3.py", "pipeline_stable_diffusion_3.py"),
+    ("/app/flux.1-dev/pipeline_flux.py", "pipeline_flux.py"),
+]
+for src_path, dst_name in patches:
+    src = pathlib.Path(src_path)
+    matches = sorted(root.glob(f"**/{dst_name}"))
+    if not matches:
+        raise SystemExit(f"diffusers: {dst_name} not found")
+    dst = matches[0]
+    shutil.copy(src, dst)
+    print("patched", dst)
 PY
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-WORKDIR /app/sd3-medium
+WORKDIR /app
 CMD ["bash"]

@@ -23,6 +23,8 @@ dependencies = [
     "scikit-learn>=1.4",
     "opencv-python-headless>=4.8",
     "piq>=0.8.0",
+    "image-reward>=1.5",
+    "pyiqa>=0.1.10",
 ]
 
 [[tool.uv.index]]

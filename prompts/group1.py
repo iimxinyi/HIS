@@ -1,13 +1,11 @@
-from sentence_transformers import SentenceTransformer
-import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
+"""Prompt group 1: cats + dogs (the original HIS prompt set)."""
 
-# Load model
-model = SentenceTransformer("all-MiniLM-L6-v2")
-
-prompts = [
+public_prompts = [
     'A graceful cat sitting in a warm and story-rich environment, highlighting its silky fur.',
     'A beautifully detailed dog with expressive eyes and a unique coat stands in a scenic natural setting.',
+]
+
+personal_prompts = [
     'A fluffy white cat with blue eyes sitting gracefully on a windowsill, bathed in golden sunlight, with a serene garden visible through the window.',
     'A majestic orange cat with a crown, sitting on a throne in a medieval castle, surrounded by intricate tapestries and candlelight.',
     'A gray cat with green eyes, sitting on a wooden porch, with soft sunlight highlighting its fur and a blurred garden in the background.',
@@ -29,25 +27,3 @@ prompts = [
     'A dog with a curly, white coat and a pink nose plays in a field of wildflowers, its tongue out and tail wagging energetically, surrounded by vibrant colors.',
     'A lively dog with a glossy, golden coat and a slightly tilted head looks up with curious eyes, its ears perked and nose twitching, standing in a sunlit garden filled with vibrant flowers.',
 ]
-
-# Generate embeddings
-embeddings = model.encode(prompts)
-
-# Compute cosine similarity matrix
-similarity_matrix = cosine_similarity(embeddings)
-
-# Create DataFrame
-prompt_labels = [f'prompt{i+1}' for i in range(len(prompts))]
-df = pd.DataFrame(
-    similarity_matrix,
-    columns=prompt_labels,
-    index=prompt_labels
-)
-
-# Round to 4 decimal places
-df = df.round(4)
-
-# Save to Excel file (added part)
-df.to_excel("prompt_similarity_matrix.xlsx", engine='openpyxl')
-
-print("Similarity matrix has been saved to prompt_similarity_matrix.xlsx")

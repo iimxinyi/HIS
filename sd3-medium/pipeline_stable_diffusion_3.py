@@ -15,6 +15,7 @@
 from fvcore.nn import FlopCountAnalysis, parameter_count_table, flop_count_table
 
 import inspect
+import os
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import torch
@@ -689,7 +690,6 @@ class StableDiffusion3Pipeline(DiffusionPipeline, SD3LoraLoaderMixin, FromSingle
         common_step: int = 0,
         prompt_unchanged: bool = True,
         get_intermediate_result: bool = False,
-        skip: bool = False,
     ):
         r"""
         Function invoked when calling the pipeline for generation.
@@ -877,13 +877,13 @@ class StableDiffusion3Pipeline(DiffusionPipeline, SD3LoraLoaderMixin, FromSingle
                 if i < common_step and prompt_unchanged == False:
                     continue
                 if i == common_step:
+                    _latents_path = os.environ.get("HIS_LATENTS_PATH", "latents_immediate.pth")
                     if prompt_unchanged == True:
-                        torch.save(latents.to(torch.device('cuda')), "latents_immediate.pth")
+                        torch.save(latents.to(latents.device), _latents_path)
                     else:
-                        latents = torch.load("latents_immediate.pth")
-                if i > common_step and skip == True:
-                    break
-                
+                        latents = torch.load(_latents_path, map_location=latents.device)
+
+
                 # expand the latents if we are doing classifier free guidance
                 latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
                 # broadcast to batch dimension in a way that's compatible with ONNX/Core ML

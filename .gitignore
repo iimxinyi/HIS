@@ -1,6 +1,14 @@
 assets/
 supplementary/
 
+# Experiment artefacts
+sd3-medium/results/
+flux.1-dev/results/
+pretrained/*.pth
+latents_immediate.pth
+demo_sd3.png
+demo_flux.png
+
 # Python-generated files
 __pycache__/
 *.py[cod]
@@ -14,3 +22,7 @@ wheels/
 .venv/
 venv/
 .env/
+
+# Local-only (do not sync)
+.claude/
+USAGE_CN.md

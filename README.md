@@ -1,260 +1,226 @@
 # Hybrid Inference Scheme (HIS)
 
-**Target:** The aim is to explore the image quality and also the misalignment between users' intentions and the corresponding generated content, with a focus on guiding the design of an efficient hybrid inference scheme.
+**Paper:** "A Novel Hybrid Inference Scheme for Diffusion-Based AIGC Services in MEC Networks" — submitted to IEEE Transactions on Mobile Computing (IEEE TMC).
 
-**Paper:** "A Novel Hybrid Inference Scheme for Diffusion-Based AIGC Services in MEC Networks" --submitted to IEEE Transactions on Mobile Computing (IEEE TMC).
+**Target:** Generate images at varying common-inference-step values, score them with both subjective (image-text alignment) and objective (no-reference IQA) metrics, then fit the image-quality function from Section III of the paper.
 
-**Experimental Platform:** Our experiments are performed on an Ubuntu 20.04 system equipped with an Intel Xeon Gold 6248R CPU and an NVIDIA A100 GPU.
+**Experimental Platform:** Ubuntu 20.04, Intel Xeon Gold 6248R, NVIDIA A100.
 
-![image](/Files/HIS-Overview.png)
+This repository supports two diffusion models in parallel:
 
+- **Stable Diffusion 3 Medium** (`sd3-medium/`)
+- **FLUX.1-dev** (`flux.1-dev/`)
 
-## 1 Environment Setup
+Each model directory has its own entry-point scripts but shares prompts (`prompts/`), metrics, and fitting code (`common/`).
 
-Create a new conda environment.
+---
 
-```shell
-conda create --name LVM python=3.10
+## 1. Repository layout
+
+```
+HIS/
+├── README.md
+├── pyproject.toml          # uv-managed dependencies
+├── uv.lock
+├── Dockerfile              # patches diffusers' SD3 and FLUX pipelines
+│
+├── prompts/                # prompt groups (single source of truth)
+│   ├── group1.py           # 2 public + 20 personal (cats + dogs) - filled in
+│   └── group2.py           # empty template; fill in before running
+│
+├── common/                 # model-agnostic helpers
+│   ├── seed.py
+│   ├── io.py               # skip-if-exists check + temp-latents path
+│   ├── metrics_clip.py         # subjective: CLIP image-text alignment
+│   ├── metrics_image_reward.py # subjective: ImageReward (BLIP, human-preference)
+│   ├── metrics_brisque.py      # objective: BRISQUE
+│   ├── metrics_musiq.py        # objective: MUSIQ (SPAQ ckpt)
+│   ├── sentence_similarity.py  # all-MiniLM-L6-v2 -> 0.1 bin
+│   └── fitting.py              # sigmoid fit + matplotlib helpers
+│
+├── pretrained/             # local model checkpoints (see pretrained/README.md)
+│   └── musiq_spaq_ckpt-358bb6af.pth   # YOU drop this in
+│
+├── sd3-medium/
+│   ├── pipeline_stable_diffusion_3.py  # patched (common_step + prompt_unchanged)
+│   ├── demo.py
+│   ├── generate_similarity.py          # similarity sweep, resumable
+│   ├── generate_sim.py                 # SIM sweep, resumable
+│   ├── evaluate.py                     # all 4 metrics -> Excel
+│   ├── fit_similarity.py               # sigmoid fit + plots
+│   └── results/                        # populated by the scripts
+│
+└── flux.1-dev/             # mirrors sd3-medium/
+    ├── pipeline_flux.py    # patched (common_step + prompt_unchanged)
+    ├── demo.py
+    ├── generate_similarity.py
+    ├── generate_sim.py
+    ├── evaluate.py
+    ├── fit_similarity.py
+    └── results/
 ```
 
+---
 
-## 2 Activate Environment
+## 2. Setup
 
-Activate the created environment.
+### Option A: Docker (recommended)
 
-```shell
-conda activate LVM
+```bash
+docker build -t his .
+docker run --gpus all -it --rm -v $PWD:/app his bash
 ```
 
+The Docker build automatically replaces the bundled `diffusers` SD3 and FLUX pipelines with the patched copies in this repo (look for the `patched ...` lines at the end of the build).
 
-## 3 Install Required Packages
+### Option B: uv (local)
 
-ubuntu=20.04  cuda=11.8
-```shell
-pip install torch==2.4.1
-pip install sentence-transformers==3.1.1
-pip install diffusers==0.30.3
-pip install transformers==4.44.2
-pip install accelerate==0.34.2
-pip install protobuf==5.28.2
-pip install sentencepiece==0.2.0
-pip install openai-clip==1.0.1
-pip install torchvision==0.19.1
-pip install openpyxl==3.1.5
-```
-Then you should get an env. like:
-```shell
-Package                  Version
------------------------- --------------------
-accelerate               0.34.2
-calflops                 0.3.2
-certifi                  2025.1.31
-charset-normalizer       3.4.1
-diffusers                0.30.3
-et_xmlfile               2.0.0
-filelock                 3.17.0
-fsspec                   2025.2.0
-ftfy                     6.3.1
-fvcore                   0.1.5.post20221221
-huggingface-hub          0.28.1
-idna                     3.10
-importlib_metadata       8.6.1
-iopath                   0.1.10
-Jinja2                   3.1.5
-joblib                   1.4.2
-MarkupSafe               3.0.2
-mpmath                   1.3.0
-networkx                 3.4.2
-numpy                    2.2.3
-nvidia-cublas-cu12       12.1.3.1
-nvidia-cuda-cupti-cu12   12.1.105
-nvidia-cuda-nvrtc-cu12   12.1.105
-nvidia-cuda-runtime-cu12 12.1.105
-nvidia-cudnn-cu12        9.1.0.70
-nvidia-cufft-cu12        11.0.2.54
-nvidia-curand-cu12       10.3.2.106
-nvidia-cusolver-cu12     11.4.5.107
-nvidia-cusparse-cu12     12.1.0.106
-nvidia-nccl-cu12         2.20.5
-nvidia-nvjitlink-cu12    12.8.61
-nvidia-nvtx-cu12         12.1.105
-openai-clip              1.0.1
-openpyxl                 3.1.5
-packaging                24.2
-pillow                   11.1.0
-pip                      25.0
-portalocker              3.1.1
-protobuf                 5.28.2
-psutil                   7.0.0
-PyYAML                   6.0.2
-regex                    2024.11.6
-requests                 2.32.3
-safetensors              0.5.2
-scikit-learn             1.6.1
-scipy                    1.15.1
-sentence-transformers    3.1.1
-sentencepiece            0.2.0
-setuptools               75.8.0
-sympy                    1.13.3
-tabulate                 0.9.0
-termcolor                3.0.1
-thop                     0.1.1.post2209072238
-threadpoolctl            3.5.0
-tokenizers               0.19.1
-torch                    2.4.1
-torchsummary             1.5.1
-torchvision              0.19.1
-tqdm                     4.67.1
-transformers             4.44.2
-triton                   3.0.0
-typing_extensions        4.12.2
-urllib3                  2.3.0
-wcwidth                  0.2.13
-wheel                    0.45.1
-yacs                     0.1.8
-zipp                     3.21.0
+```bash
+uv sync
+# manually patch diffusers' pipelines (one-time)
+uv run python - <<'PY'
+import pathlib, shutil, diffusers
+root = pathlib.Path(diffusers.__file__).resolve().parent
+for src, name in [
+    ("sd3-medium/pipeline_stable_diffusion_3.py", "pipeline_stable_diffusion_3.py"),
+    ("flux.1-dev/pipeline_flux.py", "pipeline_flux.py"),
+]:
+    dst = sorted(root.glob(f"**/{name}"))[0]
+    shutil.copy(src, dst)
+    print("patched", dst)
+PY
 ```
 
-## 4 Locate and Modify StableDiffusion3Pipeline
-Open `Demo.py` in your code editor.
+### Pretrained weights
 
-Hold down the `ctrl` key if you are on Linux or Windows, or the `command` key if you are on MacOS, and click on StableDiffusion3Pipeline.
+Drop `musiq_spaq_ckpt-358bb6af.pth` into `pretrained/`. See `pretrained/README.md` for the source path. ImageReward weights are downloaded automatically on first use.
 
-![image](/Files/modify.png)
+### Model checkpoints
 
-This will navigate to the file `pipeline_stable_diffusion_3.py`.
+Set environment variables to point to your local HuggingFace snapshots (otherwise the scripts download from the Hub):
 
-Replace `pipeline_stable_diffusion.py` with the file of the same name from this repository.
-
-
-## 5 Explanation of Our Code Files
-
-**Note:** We rewrite the Negative Prompt Generator (NPG) in our code files as the NPI in our paper, which means the same thing.
-
-`pipeline_stable_diffusion.py`: 
-
-In line 664, the parameter "prompt" is the positive personal prompt (i.e., the user-provided prompt).
-
-In line 669, the parameter "num_inference_steps" is the total number of inference steps used to generate a satisfied image.
-
-In line 671, the parameter "guidance_scale" is the guidance scale in our proposed Semantic Intensity Modulator (SIM).
-
-In line 672, the parameter "negative_prompt" is the negative personal prompt in our proposed Negative Prompt Injecor (NPI).
-
-In line 689, the parameter "common_step" is the number of common inference steps (i.e., the shared steps).
-
-In line 690, the parameter "prompt_unchanged" is True if there is no common inference phase, and vice versa.
-
-In line 691, the parameter "get_intermediate_result" is True if you want to get the intermediate image in each inference step.
-
-`1-Get-Figures`:
-
-Used to generate images for evaluating the effectiveness of individual design elements.
-
-`2-SIM-NPI-CLIP`:
-
-Used to calculate the alignment score in the SIM and NPI.
-
-`3-SIM-NPI-BRISQUE`:
-
-Used to calculate the fidelity score in the SIM and NPI.
-
-`4-Similarity-Sentence`:
-
-Used to calculate the similarity score between public and personal prompts.
-
-`5-Similarity-CLIP`:
-
-Used to calculate the image quality in our proposed Hybrid Inference Quality Metric (HIQM).
-
-`6-Similarity-Fitting`:
-
-Used to fit the HIQM function.
-
-
-## 6 Explanation of Our Results
-
-Our generated image is available in:
-
-OneDrive: 
-
-Part I: https://stuhiteducn-my.sharepoint.com/:f:/g/personal/zhuangxinyi_stu_hit_edu_cn/EozI6f2Kk2hLvIy3LWZYi6MBIaAvfO2cfI1rwI7bwuBpEw?e=WVSgdM
-
-Part II: https://mailnwpueducn-my.sharepoint.com/:f:/g/personal/zhuangxinyi_mail_nwpu_edu_cn/EuXIlVa1mT1OoNzKoJNxzaMBTOdI5j3ktjoiFCE74ML8Fg?e=s5jkWu
-
-Baidu Netdisk: 
-
-Link: https://pan.baidu.com/s/1XxX9jkjTRDss4y1_gPhoaw   Extraction code: p5n3
-
-Image naming rules for the SIM：
-
-```shell
-scalex_prompty_seedz_wNPG/woNPG.png
-x: guidance scale index
-y: personal prompt index
-z: seed index
-wNPG: the NPI is enabled
-woNPG: the NPI is not enabled
+```bash
+export SD3_MODEL_PATH=/path/to/Stable-Diffusion-3-Medium
+export FLUX_MODEL_PATH=/path/to/FLUX.1-dev
 ```
 
-Image naming rules for the NPI：
+---
 
-```shell
-promptx_seedy_wNPG/woNPG.png
-x: personal prompt index
-y: seed index
-wNPG: the NPI is enabled
-woNPG: the NPI is not enabled
+## 3. Running experiments
+
+Each command below has an SD3 form (under `sd3-medium/`) and an identical FLUX form (under `flux.1-dev/`). All generators are **resumable** — they check whether each output PNG already exists and skip it if so. Kill the script at any time and rerun to continue.
+
+### 3.1 Similarity experiment
+
+Generates one image per `(public_prompt, personal_prompt, common_step)` triple for the selected prompt group. This is the data behind the Section III fitting.
+
+```bash
+# Group 1 (default)
+python sd3-medium/generate_similarity.py --group 1
+python flux.1-dev/generate_similarity.py --group 1
+
+# Group 2 (after you fill in prompts/group2.py)
+python sd3-medium/generate_similarity.py --group 2
+python flux.1-dev/generate_similarity.py --group 2
 ```
 
-Image naming rules for the HIQM (i.e., similarity)：
+Outputs land under `results/similarity/group{N}/Public{i}_Personal{j}_CommonStep{k}.png`.
 
-```shell
-Publicx_Personaly_CommonStepz.png
-x: public prompt index
-y: personal prompt index
-z: common inference step
+### 3.2 SIM experiment
+
+Sweeps the public-prompt guidance scale (Group 1 only). Useful for validating the Semantic Intensity Modulator design.
+
+```bash
+python sd3-medium/generate_sim.py
+python flux.1-dev/generate_sim.py
 ```
 
+Outputs land under `results/sim/Guidance_Scale={i}/scale{i}_prompt{j}_seed{s}.png`.
 
-## 7 Case Study
-![image](/Files/CaseStudy.png)
+> Note on FLUX SIM: FLUX.1-dev is guidance-distilled — `guidance_scale` is embedded in the transformer rather than computed as a two-pass classifier-free guidance. The sweep still works as an exploration of the embedded-guidance value, but the result has a different mechanism than on SD3.
 
-Public prompt: `A graceful cat sitting in a warm and story-rich environment, highlighting its silky fur.`
+### 3.3 Evaluation
 
-Personal prompt: `A fluffy white cat with blue eyes sitting gracefully on a windowsill, bathed in golden sunlight, with a serene garden visible through the window.`
+Computes CLIP, ImageReward, BRISQUE, and MUSIQ for every generated image and writes an Excel with one sheet per metric:
 
-Among the above schemes, our proposed Hybrid Inference Scheme (HIS) demonstrates superior performance by maintaining high perceptual quality even when the common inference step is set to a large value.
-This effectively overcomes a key limitation reported in prior work [2], where the common inference step is typically restricted to one-third of total number of inference steps.
+```bash
+python sd3-medium/evaluate.py --exp similarity --group 1
+python sd3-medium/evaluate.py --exp sim
+# same commands under flux.1-dev/
+```
 
-[1] G. Xie *et al.*, "GAI-IoV: Bridging generative AI and vehicular networks for ubiquitous edge intelligence," *IEEE Trans. Wireless Commun.*, vol. 23, no. 10, pp. 12799-12814, Oct. 2024.
+Output: `results/eval/similarity_group{N}.xlsx`, `results/eval/sim.xlsx`.
 
-[2] H. Du *et al.*, "Reinforcement learning with LLMs interaction for distributed diffusion model services," *IEEE Trans. Pattern Anal. Mach. Intell.*, vol. 47, no. 10, pp. 8838-8855, Oct. 2025.
+### 3.4 Fitting
 
+Joins each personal prompt to its sentence-similarity bin (rounded to 0.1), averages each metric per (bin, common_step), fits a sigmoid, and saves a plot per metric plus a CSV of fitted params:
 
-## 8 Acknowledge
-[Stable Diffusion 3 Medium](https://huggingface.co/stabilityai/stable-diffusion-3-medium-diffusers/tree/main): It is a wonderful large vision model.
+```bash
+python sd3-medium/fit_similarity.py --group 1
+python flux.1-dev/fit_similarity.py --group 1
+```
 
-[CLIP](https://openai.com/index/clip/): It is a neural network that connects text and images.
+Output: `results/fitting/group{N}/{metric}.png` + `params.csv`.
 
-[BRISQUE](https://piq.readthedocs.io/en/latest/usage_examples.html): It is a classical image quality assessment model.
+---
 
-[Sentence-Transformer](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2): It maps sentences & paragraphs to a 384 dimensional dense vector space and can be used for tasks like clustering or semantic search.
+## 4. What each metric measures
 
-[DistributedDiffusion](https://github.com/HongyangDu/DistributedDiffusion): It is the first work on inference sharing in wireless networks.
+| Metric | Type | What it measures | Direction |
+|---|---|---|---|
+| **CLIP** (ViT-L/14@336px) | Subjective (alignment) | Cosine similarity between image and prompt embeddings | Higher is better |
+| **ImageReward** (BLIP-based) | Subjective (alignment) | Human-preference-trained score, alignment + aesthetics | Higher is better |
+| **BRISQUE** (piq) | Objective (NR-IQA) | Natural-scene statistics distortion score | Lower is better |
+| **MUSIQ** (SPAQ ckpt, pyiqa) | Objective (NR-IQA) | Multi-scale transformer quality score, normalised to ~[0, 1] | Higher is better |
 
-If you have any confusion, please feel free to contact us!
+---
 
+## 5. Adding more prompts (Group 2)
 
+Open `prompts/group2.py` and fill in the two lists:
 
+```python
+public_prompts = [
+    "...",
+    "...",
+]
+personal_prompts = [
+    "...",
+    # 10+ prompts; the similarity experiment costs O(N_pub * N_per * 28) images
+]
+```
 
+Then run the same `--group 2` commands. Group 2 is independent of Group 1: separate output folders, separate Excel, separate fitting plots.
 
+---
 
+## 6. File naming conventions
 
+Similarity experiment:
+```
+Public{i}_Personal{j}_CommonStep{k}.png
+  i: index of the public prompt
+  j: index of the personal prompt
+  k: number of common inference steps (0..total_step-1)
+```
 
+SIM experiment:
+```
+Guidance_Scale={s}/scale{s}_prompt{j}_seed{r}.png
+  s: public-prompt guidance scale
+  j: personal prompt index
+  r: seed
+```
 
+---
 
+## 7. Acknowledgements
 
-
-
-
+- [Stable Diffusion 3 Medium](https://huggingface.co/stabilityai/stable-diffusion-3-medium-diffusers)
+- [FLUX.1-dev](https://huggingface.co/black-forest-labs/FLUX.1-dev)
+- [CLIP](https://github.com/openai/CLIP)
+- [ImageReward](https://github.com/THUDM/ImageReward)
+- [BRISQUE via piq](https://piq.readthedocs.io)
+- [MUSIQ via pyiqa](https://github.com/chaofengc/IQA-PyTorch)
+- [Sentence-Transformers (all-MiniLM-L6-v2)](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
+- [DistributedDiffusion](https://github.com/HongyangDu/DistributedDiffusion)
