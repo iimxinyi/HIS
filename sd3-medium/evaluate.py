@@ -19,7 +19,7 @@ from common import metrics_brisque, metrics_clip, metrics_image_reward, metrics_
 from prompts import load_group
 
 
-SIMILARITY_RE = re.compile(r"^Public(\d+)_Personal(\d+)_CommonStep(\d+)\.png$")
+SIMILARITY_RE = re.compile(r"^Public(\d+)_Personal(\d+)_CommonStep(\d+)_Seed(\d+)\.png$")
 SIM_RE = re.compile(r"^scale(\d+)_prompt(\d+)_seed(\d+)\.png$")
 
 
@@ -29,17 +29,18 @@ def evaluate_similarity(group: int, root: Path, out: Path):
         raise SystemExit(f"group {group} personal prompts are empty")
 
     rows = []
-    files = sorted(root.glob("Public*_Personal*_CommonStep*.png"))
+    files = sorted(root.glob("Public*_Personal*_CommonStep*_Seed*.png"))
     for k, img_path in enumerate(files, start=1):
         m = SIMILARITY_RE.match(img_path.name)
         if not m:
             continue
-        i_pub, i_per, common_step = (int(g) for g in m.groups())
+        i_pub, i_per, common_step, seed = (int(g) for g in m.groups())
         prompt = personal_prompts[i_per]
         rows.append({
             "public_prompt": i_pub,
             "personal_prompt": i_per,
             "common_step": common_step,
+            "seed": seed,
             "clip": metrics_clip.score(str(img_path), prompt),
             "image_reward": metrics_image_reward.score(str(img_path), prompt),
             "brisque": metrics_brisque.score(str(img_path)),
@@ -53,6 +54,8 @@ def evaluate_similarity(group: int, root: Path, out: Path):
     out.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(out, engine="openpyxl") as w:
         df.to_excel(w, sheet_name="raw", index=False)
+        # Per-metric pivot: rows = (public, personal) pair, cols = common_step,
+        # cells = mean across seeds.
         for metric in ("clip", "image_reward", "brisque", "musiq"):
             pivot = df.pivot_table(
                 values=metric,

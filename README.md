@@ -124,7 +124,7 @@ python sd3-medium/generate_similarity.py --group 2
 python flux.1-dev/generate_similarity.py --group 2
 ```
 
-Outputs land under `results/similarity/group{N}/Public{i}_Personal{j}_CommonStep{k}.png`.
+Each `(public_prompt, personal_prompt, common_step)` sample is generated with 3 seeds (default `1 2 3`, override with `--seeds`). Outputs land under `results/similarity/group{N}/Public{i}_Personal{j}_CommonStep{k}_Seed{s}.png`. The evaluator averages the per-seed scores in the per-metric pivot sheets.
 
 ### 3.2 SIM experiment
 
@@ -198,10 +198,11 @@ Then run the same `--group 2` commands. Group 2 is independent of Group 1: separ
 
 Similarity experiment:
 ```
-Public{i}_Personal{j}_CommonStep{k}.png
+Public{i}_Personal{j}_CommonStep{k}_Seed{s}.png
   i: index of the public prompt
   j: index of the personal prompt
   k: number of common inference steps (0..total_step-1)
+  s: seed (default sweep is {1, 2, 3}, averaged at evaluation time)
 ```
 
 SIM experiment:
