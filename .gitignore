@@ -7,6 +7,7 @@ flux.1-dev/results/
 pretrained/*.pth
 pretrained/ImageReward-v1.0/
 pretrained/huggingface/
+pretrained/clip/
 latents_immediate.pth
 demo_sd3.png
 demo_flux.png
