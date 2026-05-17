@@ -48,7 +48,7 @@ def main():
     p.add_argument("--total-step", type=int, default=28)
     p.add_argument("--public-scale", type=float, default=2.0,
                    help="public-phase guidance scale for the wSIM variant")
-    p.add_argument("--personal-scale", type=float, default=8.0,
+    p.add_argument("--personal-scale", type=float, default=7.0,
                    help="personal-phase guidance scale (also used as public_scale for woSIM)")
     p.add_argument("--variants", nargs="+", choices=VARIANT_CHOICES, default=list(VARIANT_CHOICES))
     args = p.parse_args()

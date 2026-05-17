@@ -45,7 +45,7 @@ def main():
     p.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3],
                    help="seeds to generate per sample; metrics are averaged across them")
     p.add_argument("--total-step", type=int, default=28)
-    p.add_argument("--public-scale", type=float, default=2.0,
+    p.add_argument("--public-scale", type=float, default=1.0,
                    help="public-phase guidance scale for the wSIM variant")
     p.add_argument("--personal-scale", type=float, default=3.5,
                    help="personal-phase guidance scale (also used as public_scale for woSIM)")
