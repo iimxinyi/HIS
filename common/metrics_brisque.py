@@ -3,6 +3,10 @@
 Lower = better quality. Output is in [0, 100] for natural images.
 """
 
+# Side effect: sets TORCH_HOME so piq's torch.hub download lands under
+# pretrained/torch/ instead of /root/.cache/torch/.
+from common import pretrained_util  # noqa: F401
+
 import cv2
 import numpy as np
 import torch

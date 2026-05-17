@@ -1,16 +1,28 @@
 assets/
 supplementary/
 
-# Experiment artefacts
+# Experiment artefacts (potentially 10+ GB each)
 sd3-medium/results/
 flux.1-dev/results/
-pretrained/*.pth
-pretrained/ImageReward-v1.0/
-pretrained/huggingface/
-pretrained/clip/
+
+# Model weights and download caches under pretrained/.
+# Track only the README that tells contributors what to drop here.
+pretrained/*
+!pretrained/README.md
+
+# Latent handoff temp files (per-process and per-step)
 latents_immediate.pth
+latents_immediate.pth.step*
+his_latents_*.pth
+his_latents_*.pth.step*
+
+# Demo outputs
 demo_sd3.png
 demo_flux.png
+
+# Docker image snapshots
+*.tar
+*.tar.gz
 
 # Python-generated files
 __pycache__/

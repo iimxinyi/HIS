@@ -13,3 +13,12 @@ supplementary/
 *.jpg
 *.jpeg
 *.webp
+
+# Heavy / runtime-mounted directories (not needed in the image)
+pretrained/
+sd3-medium/results/
+flux.1-dev/results/
+latents_immediate.pth
+*.pth
+*.tar
+*.tar.gz

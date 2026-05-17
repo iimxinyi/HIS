@@ -24,6 +24,7 @@ dependencies = [
     "piq>=0.8.0",
     "image-reward>=1.5",
     "pyiqa>=0.1.10",
+    "timm>=0.9",  # pyiqa imports timm.models._builder (introduced in timm 0.9)
 ]
 
 [[tool.uv.index]]
@@ -34,6 +35,12 @@ explicit = true
 [tool.uv.sources]
 torch = { index = "pytorch-cu124" }
 torchvision = { index = "pytorch-cu124" }
+
+[tool.uv]
+# image-reward==1.5 pins timm==0.6.13, but pyiqa needs timm>=0.9 for
+# timm.models._builder. Override the pin since image-reward only uses BLIP
+# scoring (no fancy timm features), which is API-stable across timm versions.
+override-dependencies = ["timm>=0.9"]
 
 [build-system]
 requires = ["hatchling"]
