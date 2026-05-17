@@ -1,4 +1,4 @@
-"""Single-image sanity check for the patched SD3 pipeline."""
+"""Single-image sanity check for the patched SD3 pipeline.1"""
 
 import argparse
 import os
