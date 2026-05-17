@@ -2,6 +2,7 @@
 
 Usage:
     python evaluate.py --exp similarity --group 1
+    python evaluate.py --exp similarity --group 1 --variants wSIM
     python evaluate.py --exp sim
 """
 
@@ -20,7 +21,8 @@ from prompts import load_group
 
 
 SIMILARITY_RE = re.compile(r"^Public(\d+)_Personal(\d+)_CommonStep(\d+)_Seed(\d+)\.png$")
-SIM_RE = re.compile(r"^scale(\d+)_prompt(\d+)_seed(\d+)\.png$")
+SIM_RE = re.compile(r"^scale(\d+(?:\.\d+)?)_step(\d+)_prompt(\d+)_seed(\d+)\.png$")
+VARIANT_CHOICES = ("wSIM", "woSIM")
 
 
 def evaluate_similarity(group: int, root: Path, out: Path):
@@ -73,15 +75,20 @@ def evaluate_sim(root: Path, out: Path):
         raise SystemExit("group 1 personal prompts are empty")
 
     rows = []
-    files = sorted(root.glob("Guidance_Scale=*/scale*_prompt*_seed*.png"))
+    files = sorted(root.glob("Guidance_Scale=*/scale*_step*_prompt*_seed*.png"))
     for k, img_path in enumerate(files, start=1):
         m = SIM_RE.match(img_path.name)
         if not m:
             continue
-        scale, prompt_idx, seed = (int(g) for g in m.groups())
+        scale_str, common_step_str, prompt_idx_str, seed_str = m.groups()
+        scale = float(scale_str)
+        common_step = int(common_step_str)
+        prompt_idx = int(prompt_idx_str)
+        seed = int(seed_str)
         prompt = personal_prompts[prompt_idx]
         rows.append({
             "scale": scale,
+            "common_step": common_step,
             "prompt": prompt_idx,
             "seed": seed,
             "clip": metrics_clip.score(str(img_path), prompt),
@@ -97,8 +104,14 @@ def evaluate_sim(root: Path, out: Path):
     out.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(out, engine="openpyxl") as w:
         df.to_excel(w, sheet_name="raw", index=False)
+        # Per-metric pivot: rows = common_step, cols = scale, cells = mean across (prompt, seed).
         for metric in ("clip", "image_reward", "brisque", "musiq"):
-            pivot = df.pivot_table(values=metric, index="prompt", columns="scale", aggfunc="mean")
+            pivot = df.pivot_table(
+                values=metric,
+                index="common_step",
+                columns="scale",
+                aggfunc="mean",
+            )
             pivot.to_excel(w, sheet_name=metric)
     print(f"wrote {out}")
 
@@ -107,15 +120,24 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--exp", choices=["similarity", "sim"], required=True)
     p.add_argument("--group", type=int, choices=[1, 2], default=1, help="similarity only")
+    p.add_argument("--variants", nargs="+", choices=VARIANT_CHOICES, default=list(VARIANT_CHOICES),
+                   help="similarity only; defaults to both wSIM and woSIM")
     p.add_argument("--root", default=None)
     p.add_argument("--out", default=None)
     args = p.parse_args()
 
     here = Path(__file__).parent
     if args.exp == "similarity":
-        root = Path(args.root or here / "results" / "similarity" / f"group{args.group}")
-        out = Path(args.out or here / "results" / "eval" / f"similarity_group{args.group}.xlsx")
-        evaluate_similarity(args.group, root, out)
+        for variant in args.variants:
+            default_root = here / "results" / "similarity" / f"group{args.group}" / variant
+            default_out = here / "results" / "eval" / f"similarity_group{args.group}_{variant}.xlsx"
+            root = Path(args.root or default_root) if len(args.variants) == 1 and args.root else default_root
+            out = Path(args.out or default_out) if len(args.variants) == 1 and args.out else default_out
+            if not root.exists():
+                print(f"skip variant {variant}: {root} does not exist")
+                continue
+            print(f"=== variant {variant}: reading {root} ===")
+            evaluate_similarity(args.group, root, out)
     else:
         root = Path(args.root or here / "results" / "sim")
         out = Path(args.out or here / "results" / "eval" / "sim.xlsx")

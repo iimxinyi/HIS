@@ -936,20 +936,27 @@ class FluxPipeline(
         # 6. Denoising loop
         # We set the index here to remove DtoH sync, helpful especially during compilation.
         # Check out more details here: https://github.com/huggingface/diffusers/pull/11696
-        self.scheduler.set_begin_index(0)
+        # HIS patch: when consuming pre-saved latents (personal phase), the loop only enters
+        # scheduler.step() starting from i==common_step, so the scheduler must believe it is
+        # already at sigmas[common_step]. Otherwise it uses sigmas[0] and the Euler updates are
+        # wrong-magnitude, leaving residual noise in the final image.
+        self.scheduler.set_begin_index(common_step if not prompt_unchanged else 0)
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
                 if self.interrupt:
                     continue
 
-                if i < common_step and prompt_unchanged == False:
-                    continue
-                if i == common_step:
-                    _latents_path = os.environ.get("HIS_LATENTS_PATH", "latents_immediate.pth")
-                    if prompt_unchanged == True:
-                        torch.save(latents.to(latents.device), _latents_path)
-                    else:
-                        latents = torch.load(_latents_path, map_location=latents.device)
+                # HIS patch: in public phase (prompt_unchanged=True) save latents at every step
+                # so a single public denoising run covers all common_step values. In personal
+                # phase, skip steps before common_step and load the matching checkpoint.
+                _latents_path = os.environ.get("HIS_LATENTS_PATH", "latents_immediate.pth")
+                if prompt_unchanged == True:
+                    torch.save(latents.to(latents.device), f"{_latents_path}.step{i}")
+                else:
+                    if i < common_step:
+                        continue
+                    if i == common_step:
+                        latents = torch.load(f"{_latents_path}.step{common_step}", map_location=latents.device)
 
                 self._current_timestep = t
                 if image_embeds is not None:

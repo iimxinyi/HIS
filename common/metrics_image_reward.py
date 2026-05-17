@@ -5,9 +5,14 @@ roughly in [-3, 3]; positive values indicate the image is preferred for the
 given prompt.
 """
 
+from pathlib import Path
 from typing import Union
 
 from PIL import Image
+
+from common.pretrained_util import PRETRAINED_DIR, configure_hf_cache
+
+_IMAGEREWARD_DIR = PRETRAINED_DIR / "ImageReward-v1.0"
 
 _model = None
 
@@ -16,7 +21,10 @@ def _load():
     global _model
     if _model is None:
         import ImageReward as RM
-        _model = RM.load("ImageReward-v1.0")
+
+        configure_hf_cache()
+        _IMAGEREWARD_DIR.mkdir(parents=True, exist_ok=True)
+        _model = RM.load("ImageReward-v1.0", download_root=str(_IMAGEREWARD_DIR))
     return _model
 
 

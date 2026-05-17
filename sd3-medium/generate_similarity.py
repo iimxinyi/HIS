@@ -1,9 +1,19 @@
 """Generate similarity-experiment images on SD3-medium.
 
-For each (public_prompt_idx, personal_prompt_idx, common_step) the script
-runs the public phase to produce the shared latents, then the personal phase
-to produce the final image. Output PNGs that already exist are skipped, so
-the script is restartable.
+Runs two variants:
+  * wSIM : public_scale != personal_scale (the SIM uses two different
+           guidance scales for public and personal phases)
+  * woSIM: public_scale == personal_scale (baseline without SIM)
+
+Each variant has its own subdirectory and is evaluated / fitted separately.
+
+The public denoising trajectory depends only on (public_prompt, seed, variant)
+— the patched pipeline saves latents at every step during a single public-phase
+call, so the public phase runs **once per (variant, public, seed)** and is
+reused across all personal prompts and common_step values.
+
+Resumable: skips per-block when every output PNG already exists, and skips
+individual personal-phase images that exist.
 
 Usage:
     python generate_similarity.py --group 1
@@ -25,6 +35,9 @@ from common.seed import seed_everywhere
 from prompts import load_group
 
 
+VARIANT_CHOICES = ("wSIM", "woSIM")
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--group", type=int, choices=[1, 2], default=1)
@@ -33,8 +46,11 @@ def main():
     p.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3],
                    help="seeds to generate per sample; metrics are averaged across them")
     p.add_argument("--total-step", type=int, default=28)
-    p.add_argument("--public-scale", type=float, default=2.0)
-    p.add_argument("--personal-scale", type=float, default=8.0)
+    p.add_argument("--public-scale", type=float, default=2.0,
+                   help="public-phase guidance scale for the wSIM variant")
+    p.add_argument("--personal-scale", type=float, default=8.0,
+                   help="personal-phase guidance scale (also used as public_scale for woSIM)")
+    p.add_argument("--variants", nargs="+", choices=VARIANT_CHOICES, default=list(VARIANT_CHOICES))
     args = p.parse_args()
 
     public_prompts, personal_prompts = load_group(args.group)
@@ -42,48 +58,80 @@ def main():
         print(f"group {args.group} has empty prompts; fill them in before running")
         return
 
-    out_dir = Path(args.out_dir or (Path(__file__).parent / "results" / "similarity" / f"group{args.group}"))
-    out_dir.mkdir(parents=True, exist_ok=True)
+    base_out = Path(args.out_dir or (Path(__file__).parent / "results" / "similarity" / f"group{args.group}"))
 
-    reserve_latents_path()
+    latents_base = reserve_latents_path()
 
     pipe = StableDiffusion3Pipeline.from_pretrained(args.model, torch_dtype=torch.float16).to("cuda")
 
-    total = len(public_prompts) * len(personal_prompts) * args.total_step * len(args.seeds)
+    variant_scales = {
+        "wSIM": args.public_scale,
+        "woSIM": args.personal_scale,
+    }
+
+    total_per_variant = len(public_prompts) * len(personal_prompts) * args.total_step * len(args.seeds)
+    total = total_per_variant * len(args.variants)
     done = 0
     skipped = 0
-    for i_pub, public_prompt in enumerate(public_prompts):
-        for i_per, personal_prompt in enumerate(personal_prompts):
-            for common_step in range(args.total_step):
-                for seed in args.seeds:
-                    done += 1
-                    out_path = out_dir / f"Public{i_pub}_Personal{i_per}_CommonStep{common_step}_Seed{seed}.png"
-                    if already_done(out_path):
-                        skipped += 1
-                        continue
+    public_runs = 0
 
-                    generator = seed_everywhere(seed)
-                    pipe(
-                        prompt=public_prompt,
-                        num_inference_steps=args.total_step,
-                        guidance_scale=args.public_scale,
-                        common_step=common_step,
-                        prompt_unchanged=True,
-                        generator=generator,
-                    )
-                    generator = seed_everywhere(seed)
-                    image = pipe(
-                        prompt=personal_prompt,
-                        num_inference_steps=args.total_step,
-                        guidance_scale=args.personal_scale,
-                        common_step=common_step,
-                        prompt_unchanged=False,
-                        generator=generator,
-                    ).images[0]
-                    image.save(ensure_parent(out_path))
-                    print(f"[{done}/{total}] saved {out_path.name}")
+    for variant in args.variants:
+        public_scale = variant_scales[variant]
+        out_dir = base_out / variant
+        out_dir.mkdir(parents=True, exist_ok=True)
+        print(f"=== variant {variant}: public_scale={public_scale}, personal_scale={args.personal_scale} ===")
 
-    print(f"done. generated {done - skipped} new images, skipped {skipped} existing")
+        for i_pub, public_prompt in enumerate(public_prompts):
+            for seed in args.seeds:
+                block_outputs = [
+                    out_dir / f"Public{i_pub}_Personal{i_per}_CommonStep{k}_Seed{seed}.png"
+                    for i_per in range(len(personal_prompts))
+                    for k in range(args.total_step)
+                ]
+                if all(already_done(p) for p in block_outputs):
+                    done += len(block_outputs)
+                    skipped += len(block_outputs)
+                    continue
+
+                # Public phase: one run produces .step0 ... .step{total_step-1} latent files.
+                generator = seed_everywhere(seed)
+                pipe(
+                    prompt=public_prompt,
+                    num_inference_steps=args.total_step,
+                    guidance_scale=public_scale,
+                    common_step=0,  # ignored when prompt_unchanged=True
+                    prompt_unchanged=True,
+                    generator=generator,
+                )
+                public_runs += 1
+                print(f"[public {public_runs}] variant={variant} public_prompt={i_pub} seed={seed}")
+
+                for i_per, personal_prompt in enumerate(personal_prompts):
+                    for common_step in range(args.total_step):
+                        done += 1
+                        out_path = out_dir / f"Public{i_pub}_Personal{i_per}_CommonStep{common_step}_Seed{seed}.png"
+                        if already_done(out_path):
+                            skipped += 1
+                            continue
+                        generator = seed_everywhere(seed)
+                        image = pipe(
+                            prompt=personal_prompt,
+                            num_inference_steps=args.total_step,
+                            guidance_scale=args.personal_scale,
+                            common_step=common_step,
+                            prompt_unchanged=False,
+                            generator=generator,
+                        ).images[0]
+                        image.save(ensure_parent(out_path))
+                        print(f"[{done}/{total}] saved {variant}/{out_path.name}")
+
+                for k in range(args.total_step):
+                    p_step = Path(f"{latents_base}.step{k}")
+                    if p_step.exists():
+                        p_step.unlink()
+
+    print(f"done. generated {done - skipped} new images, skipped {skipped} existing, "
+          f"public phase ran {public_runs} times")
 
 
 if __name__ == "__main__":

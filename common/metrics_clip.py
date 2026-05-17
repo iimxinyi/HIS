@@ -9,6 +9,10 @@ import clip
 import torch
 from PIL import Image
 
+from common.pretrained_util import PRETRAINED_DIR
+
+_CLIP_CACHE_DIR = PRETRAINED_DIR / "clip"
+
 _model = None
 _preprocess = None
 
@@ -17,7 +21,12 @@ def _load(device: str | None = None):
     global _model, _preprocess
     if _model is None:
         device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        _model, _preprocess = clip.load("ViT-L/14@336px", device=device)
+        _CLIP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        _model, _preprocess = clip.load(
+            "ViT-L/14@336px",
+            device=device,
+            download_root=str(_CLIP_CACHE_DIR),
+        )
         _model.eval()
     return _model, _preprocess
 

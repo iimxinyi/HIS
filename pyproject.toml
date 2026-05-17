@@ -5,17 +5,16 @@ description = "Hybrid Inference Scheme (HIS) experiments"
 readme = "README.md"
 requires-python = "==3.10.*"
 dependencies = [
-    "torch==2.4.1",
-    "torchvision==0.19.1",
-    "sentence-transformers==3.1.1",
-    "diffusers==0.30.3",
-    "transformers==4.44.2",
-    "accelerate==0.34.2",
+    "torch>=2.5,<2.8",
+    "torchvision>=0.20,<0.23",
+    "sentence-transformers>=3.1.1",
+    "diffusers>=0.32,<0.40",
+    "transformers>=4.45,<5",
+    "accelerate>=0.34",
     "protobuf==5.28.2",
     "sentencepiece==0.2.0",
-    "openai-clip==1.0.1",
-    "openpyxl==3.1.5",
-    "fvcore>=0.1.5",
+    "openai-clip==1.0.1",  # 1.0.1 imports `pkg_resources`; Dockerfile patches it to `import packaging`
+    "openpyxl>=3.1.5",
     "numpy>=1.26,<3",
     "scipy>=1.11",
     "matplotlib>=3.8",

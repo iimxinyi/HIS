@@ -93,7 +93,7 @@ PY
 
 ### Pretrained weights
 
-Drop `musiq_spaq_ckpt-358bb6af.pth` into `pretrained/`. See `pretrained/README.md` for the source path. ImageReward weights are downloaded automatically on first use.
+MUSIQ and ImageReward weights are downloaded automatically on first evaluate into `pretrained/` (hub cache under `pretrained/huggingface/`). See `pretrained/README.md`.
 
 ### Model checkpoints
 

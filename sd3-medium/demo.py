@@ -22,8 +22,8 @@ def main():
     p.add_argument("--seed", type=int, default=203)
     p.add_argument("--total-step", type=int, default=28)
     p.add_argument("--common-step", type=int, default=8)
-    p.add_argument("--public-scale", type=float, default=2.0)
-    p.add_argument("--personal-scale", type=float, default=8.0)
+    p.add_argument("--public-scale", type=float, default=1.0)
+    p.add_argument("--personal-scale", type=float, default=7.0)
     args = p.parse_args()
 
     reserve_latents_path()

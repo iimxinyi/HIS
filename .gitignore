@@ -5,6 +5,8 @@ supplementary/
 sd3-medium/results/
 flux.1-dev/results/
 pretrained/*.pth
+pretrained/ImageReward-v1.0/
+pretrained/huggingface/
 latents_immediate.pth
 demo_sd3.png
 demo_flux.png

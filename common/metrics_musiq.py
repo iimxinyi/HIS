@@ -11,23 +11,41 @@ import torch
 from PIL import Image
 from torchvision import transforms
 
-_DEFAULT_CKPT = Path(__file__).resolve().parent.parent / "pretrained" / "musiq_spaq_ckpt-358bb6af.pth"
+from common.pretrained_util import PRETRAINED_DIR, configure_hf_cache
+
+_CKPT_NAME = "musiq_spaq_ckpt-358bb6af.pth"
+_HF_REPO = "chaofengc/IQA-PyTorch-Weights"
+_DEFAULT_CKPT = PRETRAINED_DIR / _CKPT_NAME
 
 _model = None
 _device = None
+
+
+def _ensure_ckpt() -> Path:
+    configure_hf_cache()
+    if _DEFAULT_CKPT.exists():
+        return _DEFAULT_CKPT
+    from huggingface_hub import hf_hub_download
+
+    hf_hub_download(
+        repo_id=_HF_REPO,
+        filename=_CKPT_NAME,
+        local_dir=str(PRETRAINED_DIR),
+    )
+    if not _DEFAULT_CKPT.exists():
+        raise FileNotFoundError(
+            f"MUSIQ checkpoint download failed; expected {_DEFAULT_CKPT}"
+        )
+    return _DEFAULT_CKPT
 
 
 def _load(device: str | None = None, ckpt_path: str | None = None):
     global _model, _device
     if _model is None:
         from pyiqa.archs.musiq_arch import MUSIQ
+
         _device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        path = ckpt_path or str(_DEFAULT_CKPT)
-        if not Path(path).exists():
-            raise FileNotFoundError(
-                f"MUSIQ checkpoint not found at {path}. "
-                f"Copy musiq_spaq_ckpt-358bb6af.pth into ./pretrained/ first."
-            )
+        path = ckpt_path or str(_ensure_ckpt())
         _model = MUSIQ(pretrained_model_path=path).to(_device).eval()
     return _model, _device
 
