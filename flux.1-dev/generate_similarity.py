@@ -35,7 +35,7 @@ MODE_CHOICES = ("public-anchored", "personal-anchored")
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--group", type=int, choices=[1, 2], default=1)
+    p.add_argument("--group", type=int, choices=[1, 2], default=2)
     p.add_argument("--model", default=os.environ.get("FLUX_MODEL_PATH", "black-forest-labs/FLUX.1-dev"))
     p.add_argument("--out-dir", default=None)
     p.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3],
