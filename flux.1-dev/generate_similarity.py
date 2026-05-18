@@ -1,21 +1,16 @@
 """Generate similarity-experiment images on FLUX.1-dev.
 
-Runs two variants:
+Two variants:
   * wSIM : public_scale != personal_scale
   * woSIM: public_scale == personal_scale (baseline)
 
-Each variant has its own subdirectory and is evaluated / fitted separately.
-
-The public denoising trajectory depends only on (public_prompt, seed, variant),
-so the patched pipeline saves latents at every step during a single public-phase
-call; the public phase runs once per (variant, public, seed) and the inner
-(personal, common_step) loop reuses the saved checkpoints.
-
-Resumable: skips per-block when every output PNG already exists, and skips
-individual personal-phase images that exist.
+Two anchoring modes (both by default; resume-safe):
+  * public-anchored   : Public{i}_Personal{j}_CommonStep{k}_Seed{s}.png
+  * personal-anchored : PAnchor{i}_POther{j}_CommonStep{k}_Seed{s}.png
 
 Usage:
     python generate_similarity.py --group 1
+    python generate_similarity.py --group 1 --modes personal-anchored
 """
 
 import argparse
@@ -35,6 +30,7 @@ from prompts import load_group
 
 
 VARIANT_CHOICES = ("wSIM", "woSIM")
+MODE_CHOICES = ("public-anchored", "personal-anchored")
 
 
 def main():
@@ -46,10 +42,15 @@ def main():
                    help="seeds to generate per sample; metrics are averaged across them")
     p.add_argument("--total-step", type=int, default=28)
     p.add_argument("--public-scale", type=float, default=1.0,
-                   help="public-phase guidance scale for the wSIM variant")
+                   help="anchor-phase guidance scale for wSIM (common phase)")
     p.add_argument("--personal-scale", type=float, default=3.5,
-                   help="personal-phase guidance scale (also used as public_scale for woSIM)")
+                   help="personal-phase guidance scale (also used as anchor scale for woSIM)")
     p.add_argument("--variants", nargs="+", choices=VARIANT_CHOICES, default=list(VARIANT_CHOICES))
+    p.add_argument("--modes", nargs="+", choices=MODE_CHOICES, default=list(MODE_CHOICES),
+                   help="which anchoring modes to run; defaults to both")
+    p.add_argument("--cross-anchors", type=int, nargs="+", default=None,
+                   help="subset of personal indices to use as anchors in personal-anchored mode "
+                        "(default: all personal prompts)")
     args = p.parse_args()
 
     public_prompts, personal_prompts = load_group(args.group)
@@ -68,68 +69,97 @@ def main():
         "woSIM": args.personal_scale,
     }
 
-    total_per_variant = len(public_prompts) * len(personal_prompts) * args.total_step * len(args.seeds)
-    total = total_per_variant * len(args.variants)
+    cross_anchors = args.cross_anchors if args.cross_anchors is not None else list(range(len(personal_prompts)))
+
+    def cleanup_steps():
+        for k in range(args.total_step):
+            p_step = Path(f"{latents_base}.step{k}")
+            if p_step.exists():
+                p_step.unlink()
+
+    def run_block(anchor_prompt, anchor_scale, targets, name_for_log, filename_pattern, seed):
+        nonlocal done, skipped, public_runs
+
+        block_outputs = [
+            out_dir / filename_pattern.format(target=i_target, common_step=k, seed=seed)
+            for i_target, _ in targets
+            for k in range(args.total_step)
+        ]
+        if all(already_done(pp) for pp in block_outputs):
+            done += len(block_outputs)
+            skipped += len(block_outputs)
+            return
+
+        generator = seed_everywhere(seed)
+        pipe(
+            prompt=anchor_prompt,
+            num_inference_steps=args.total_step,
+            guidance_scale=anchor_scale,
+            common_step=0,
+            prompt_unchanged=True,
+            generator=generator,
+        )
+        public_runs += 1
+        print(f"[anchor {public_runs}] {name_for_log}")
+
+        for i_target, target_prompt in targets:
+            for common_step in range(args.total_step):
+                done += 1
+                out_path = out_dir / filename_pattern.format(target=i_target, common_step=common_step, seed=seed)
+                if already_done(out_path):
+                    skipped += 1
+                    continue
+                generator = seed_everywhere(seed)
+                image = pipe(
+                    prompt=target_prompt,
+                    num_inference_steps=args.total_step,
+                    guidance_scale=args.personal_scale,
+                    common_step=common_step,
+                    prompt_unchanged=False,
+                    generator=generator,
+                ).images[0]
+                image.save(ensure_parent(out_path))
+                print(f"[{done}/{total}] saved {variant}/{out_path.name}")
+
+        cleanup_steps()
+
+    total = 0
+    for variant in args.variants:
+        for mode in args.modes:
+            if mode == "public-anchored":
+                total += len(public_prompts) * len(personal_prompts) * args.total_step * len(args.seeds)
+            else:
+                total += sum(len(personal_prompts) - 1 for i in cross_anchors if i < len(personal_prompts)) * args.total_step * len(args.seeds)
+
     done = 0
     skipped = 0
     public_runs = 0
 
     for variant in args.variants:
-        public_scale = variant_scales[variant]
+        anchor_scale = variant_scales[variant]
         out_dir = base_out / variant
         out_dir.mkdir(parents=True, exist_ok=True)
-        print(f"=== variant {variant}: public_scale={public_scale}, personal_scale={args.personal_scale} ===")
+        print(f"=== variant {variant}: anchor_scale={anchor_scale}, personal_scale={args.personal_scale} ===")
 
-        for i_pub, public_prompt in enumerate(public_prompts):
-            for seed in args.seeds:
-                block_outputs = [
-                    out_dir / f"Public{i_pub}_Personal{i_per}_CommonStep{k}_Seed{seed}.png"
-                    for i_per in range(len(personal_prompts))
-                    for k in range(args.total_step)
-                ]
-                if all(already_done(p) for p in block_outputs):
-                    done += len(block_outputs)
-                    skipped += len(block_outputs)
+        if "public-anchored" in args.modes:
+            for i_pub, public_prompt in enumerate(public_prompts):
+                for seed in args.seeds:
+                    targets = list(enumerate(personal_prompts))
+                    pattern = f"Public{i_pub}_Personal{{target}}_CommonStep{{common_step}}_Seed{{seed}}.png"
+                    run_block(public_prompt, anchor_scale, targets, f"public={i_pub} seed={seed}", pattern, seed)
+
+        if "personal-anchored" in args.modes:
+            for i_anchor in cross_anchors:
+                if i_anchor >= len(personal_prompts):
                     continue
-
-                generator = seed_everywhere(seed)
-                pipe(
-                    prompt=public_prompt,
-                    num_inference_steps=args.total_step,
-                    guidance_scale=public_scale,
-                    common_step=0,
-                    prompt_unchanged=True,
-                    generator=generator,
-                )
-                public_runs += 1
-                print(f"[public {public_runs}] variant={variant} public_prompt={i_pub} seed={seed}")
-
-                for i_per, personal_prompt in enumerate(personal_prompts):
-                    for common_step in range(args.total_step):
-                        done += 1
-                        out_path = out_dir / f"Public{i_pub}_Personal{i_per}_CommonStep{common_step}_Seed{seed}.png"
-                        if already_done(out_path):
-                            skipped += 1
-                            continue
-                        generator = seed_everywhere(seed)
-                        image = pipe(
-                            prompt=personal_prompt,
-                            num_inference_steps=args.total_step,
-                            guidance_scale=args.personal_scale,
-                            common_step=common_step,
-                            prompt_unchanged=False,
-                            generator=generator,
-                        ).images[0]
-                        image.save(ensure_parent(out_path))
-                        print(f"[{done}/{total}] saved {variant}/{out_path.name}")
-
-                for k in range(args.total_step):
-                    p_step = Path(f"{latents_base}.step{k}")
-                    if p_step.exists():
-                        p_step.unlink()
+                anchor_prompt = personal_prompts[i_anchor]
+                for seed in args.seeds:
+                    targets = [(j, personal_prompts[j]) for j in range(len(personal_prompts)) if j != i_anchor]
+                    pattern = f"PAnchor{i_anchor}_POther{{target}}_CommonStep{{common_step}}_Seed{{seed}}.png"
+                    run_block(anchor_prompt, anchor_scale, targets, f"panchor={i_anchor} seed={seed}", pattern, seed)
 
     print(f"done. generated {done - skipped} new images, skipped {skipped} existing, "
-          f"public phase ran {public_runs} times")
+          f"common phase ran {public_runs} times")
 
 
 if __name__ == "__main__":

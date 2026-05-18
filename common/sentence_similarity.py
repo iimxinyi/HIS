@@ -7,13 +7,21 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from common.pretrained_util import PRETRAINED_DIR
+
+# Prefer a local snapshot under pretrained/ so the script works in offline
+# containers (HF_HUB_OFFLINE=1). Falls back to the HF hub id if the local
+# copy is missing — useful for fresh dev environments with network access.
+_LOCAL_MODEL = PRETRAINED_DIR / "all-MiniLM-L6-v2"
+_MODEL_ID = str(_LOCAL_MODEL) if _LOCAL_MODEL.exists() else "all-MiniLM-L6-v2"
+
 _model: SentenceTransformer | None = None
 
 
 def _load() -> SentenceTransformer:
     global _model
     if _model is None:
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
+        _model = SentenceTransformer(_MODEL_ID)
     return _model
 
 

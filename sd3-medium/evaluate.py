@@ -1,7 +1,7 @@
 """Run all 4 metrics (CLIP, ImageReward, BRISQUE, MUSIQ) on a results dir.
 
 Usage:
-    python evaluate.py --exp similarity --group 1
+    c
     python evaluate.py --exp similarity --group 1 --variants wSIM
     python evaluate.py --exp sim
 """
@@ -20,7 +20,8 @@ from common import metrics_brisque, metrics_clip, metrics_image_reward, metrics_
 from prompts import load_group
 
 
-SIMILARITY_RE = re.compile(r"^Public(\d+)_Personal(\d+)_CommonStep(\d+)_Seed(\d+)\.png$")
+PUBLIC_ANCHORED_RE = re.compile(r"^Public(\d+)_Personal(\d+)_CommonStep(\d+)_Seed(\d+)\.png$")
+PERSONAL_ANCHORED_RE = re.compile(r"^PAnchor(\d+)_POther(\d+)_CommonStep(\d+)_Seed(\d+)\.png$")
 SIM_RE = re.compile(r"^scale(\d+(?:\.\d+)?)_step(\d+)_prompt(\d+)_seed(\d+)\.png$")
 VARIANT_CHOICES = ("wSIM", "woSIM")
 
@@ -31,20 +32,30 @@ def evaluate_similarity(group: int, root: Path, out: Path):
         raise SystemExit(f"group {group} personal prompts are empty")
 
     rows = []
-    files = sorted(root.glob("Public*_Personal*_CommonStep*_Seed*.png"))
+    files = sorted(list(root.glob("Public*_Personal*_CommonStep*_Seed*.png"))
+                   + list(root.glob("PAnchor*_POther*_CommonStep*_Seed*.png")))
     for k, img_path in enumerate(files, start=1):
-        m = SIMILARITY_RE.match(img_path.name)
-        if not m:
+        m_pub = PUBLIC_ANCHORED_RE.match(img_path.name)
+        m_per = PERSONAL_ANCHORED_RE.match(img_path.name)
+        if m_pub:
+            i_anchor, i_target, common_step, seed = (int(g) for g in m_pub.groups())
+            anchor_kind = "public"
+        elif m_per:
+            i_anchor, i_target, common_step, seed = (int(g) for g in m_per.groups())
+            anchor_kind = "personal"
+        else:
             continue
-        i_pub, i_per, common_step, seed = (int(g) for g in m.groups())
-        prompt = personal_prompts[i_per]
+        # The image's target prompt is always a personal prompt (the prompt that
+        # swaps in during the personal phase). CLIP/ImageReward score against it.
+        target_prompt = personal_prompts[i_target]
         rows.append({
-            "public_prompt": i_pub,
-            "personal_prompt": i_per,
+            "anchor_kind": anchor_kind,
+            "anchor_idx": i_anchor,
+            "target_idx": i_target,
             "common_step": common_step,
             "seed": seed,
-            "clip": metrics_clip.score(str(img_path), prompt),
-            "image_reward": metrics_image_reward.score(str(img_path), prompt),
+            "clip": metrics_clip.score(str(img_path), target_prompt),
+            "image_reward": metrics_image_reward.score(str(img_path), target_prompt),
             "brisque": metrics_brisque.score(str(img_path)),
             "musiq": metrics_musiq.score(str(img_path)),
             "filename": img_path.name,
@@ -56,12 +67,12 @@ def evaluate_similarity(group: int, root: Path, out: Path):
     out.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(out, engine="openpyxl") as w:
         df.to_excel(w, sheet_name="raw", index=False)
-        # Per-metric pivot: rows = (public, personal) pair, cols = common_step,
-        # cells = mean across seeds.
+        # Per-metric pivot: one row per (anchor_kind, anchor_idx, target_idx),
+        # columns = common_step, cells = mean across seeds.
         for metric in ("clip", "image_reward", "brisque", "musiq"):
             pivot = df.pivot_table(
                 values=metric,
-                index=["public_prompt", "personal_prompt"],
+                index=["anchor_kind", "anchor_idx", "target_idx"],
                 columns="common_step",
                 aggfunc="mean",
             )

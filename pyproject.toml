@@ -25,6 +25,7 @@ dependencies = [
     "image-reward>=1.5",
     "pyiqa>=0.1.10",
     "timm>=0.9",  # pyiqa imports timm.models._builder (introduced in timm 0.9)
+    "datasets>=2.18",  # sentence-transformers imports datasets; older datasets uses pyarrow.PyExtensionType which was removed in pyarrow 15+
 ]
 
 [[tool.uv.index]]
