@@ -4,7 +4,7 @@
 
 **Goal:** Generate images at varying common-inference-step values, score them with both subjective (image-text alignment) and objective (no-reference IQA) metrics, then fit the image-quality function from Section III of the paper.
 
-**Experimental platform:** Ubuntu 22.04, NVIDIA A100 / RTX 4090.
+**Experimental platform:** Ubuntu 22.04, NVIDIA A800 x 4 / RTX 4090D x 2.
 
 Supports two diffusion backbones with parallel pipelines:
 
@@ -21,15 +21,14 @@ Each model directory has its own entry-point scripts; everything model-agnostic
 ```
 HIS/
 ├── README.md
-├── USAGE_CN.md                # 中文使用说明（同步更新中）
 ├── pyproject.toml             # uv-managed dependencies
 ├── uv.lock
 ├── Dockerfile                 # patches diffusers + ImageReward + clip imports
 ├── fit_sigmoid.py             # standalone sigmoid fitter (model-agnostic)
 │
 ├── prompts/                   # single source of truth for prompts
-│   ├── group1.py              # 2 public + 20 personal (cats + dogs) - filled
-│   └── group2.py              # empty template; fill in before running
+│   ├── group1.py              # 2 public + 20 personal
+│   └── group2.py              # DiffusionDB prompts, fill in before running
 │
 ├── common/                    # model-agnostic helpers
 │   ├── seed.py                # seed_everywhere(seed)
@@ -125,19 +124,17 @@ PY
 All caches live under `pretrained/` so they survive container restarts (via
 `-v $PWD:/workspace`).
 
-| Item | Path | How to get it |
-|---|---|---|
-| SD3-Medium | `$SD3_MODEL_PATH` (env var) | Hugging Face snapshot |
-| FLUX.1-dev | `$FLUX_MODEL_PATH` (env var) | Hugging Face snapshot |
-| CLIP ViT-L/14@336px | `pretrained/clip/` | Auto on first `evaluate.py` run |
-| ImageReward | `pretrained/ImageReward-v1.0/` | Auto on first `evaluate.py` run |
-| MUSIQ (SPAQ) | `pretrained/musiq_spaq_ckpt-358bb6af.pth` | Auto via HF on first `evaluate.py` run |
-| BRISQUE SVM | `pretrained/torch/hub/checkpoints/brisque_svm_weights.pt` | Auto via torch.hub on first call |
-| bert-base-uncased tokenizer | `pretrained/bert-base-uncased/` | **Manual** (ImageReward needs it; small files) |
-| all-MiniLM-L6-v2 | `pretrained/all-MiniLM-L6-v2/` | **Manual** in offline containers |
+| Item | Path |
+|---|---|
+| SD3-Medium | `$SD3_MODEL_PATH` (env var) |
+| FLUX.1-dev | `$FLUX_MODEL_PATH` (env var) |
+| CLIP ViT-L/14@336px | `pretrained/clip/` |
+| ImageReward | `pretrained/ImageReward-v1.0/` |
+| MUSIQ (SPAQ) | `pretrained/musiq_spaq_ckpt-358bb6af.pth` |
+| BRISQUE SVM | `pretrained/torch/hub/checkpoints/brisque_svm_weights.pt` |
+| bert-base-uncased tokenizer | `pretrained/bert-base-uncased/` |
+| all-MiniLM-L6-v2 | `pretrained/all-MiniLM-L6-v2/` |
 
-The two "Manual" entries are only required when the container has no HuggingFace
-access (e.g. `HF_HUB_OFFLINE=1`). Download instructions are in `USAGE_CN.md`.
 
 ---
 
@@ -148,7 +145,23 @@ Every generator is **resumable** — it skips outputs that already exist, so you
 can Ctrl+C and rerun without losing progress. Each `(sample, common_step)` is
 generated with 3 seeds (default `1 2 3`); metrics are averaged across seeds.
 
-### 4.1 Similarity experiment
+### 4.1 SIM experiment
+
+Sweeps the public-prompt guidance scale **for each common_step value**.
+
+```bash
+python sd3-medium/generate_sim.py
+python flux.1-dev/generate_sim.py
+```
+
+Files: `results/sim/Guidance_Scale={s}/scale{s}_step{k}_prompt{j}_seed{r}.png`.
+
+> **Note on FLUX SIM**: FLUX.1-dev is guidance-distilled — `guidance_scale` is
+> embedded into the transformer rather than computed as a two-pass classifier-free
+> guidance. The sweep still works as an exploration of the embedded-guidance
+> value, but the mechanism differs from SD3.
+
+### 4.2 Similarity experiment
 
 Two variants and two anchoring modes are run by default.
 
@@ -180,22 +193,6 @@ python sd3-medium/generate_similarity.py --group 1 --modes personal-anchored \
 
 Outputs land under `results/similarity/group{N}/{variant}/`.
 
-### 4.2 SIM experiment
-
-Sweeps the public-prompt guidance scale **for each common_step value** in
-`{3, 6, 9, 12, 15, 18, 21, 24, 27}`. Group 1 only.
-
-```bash
-python sd3-medium/generate_sim.py
-python flux.1-dev/generate_sim.py
-```
-
-Files: `results/sim/Guidance_Scale={s}/scale{s}_step{k}_prompt{j}_seed{r}.png`.
-
-> **Note on FLUX SIM**: FLUX.1-dev is guidance-distilled — `guidance_scale` is
-> embedded into the transformer rather than computed as a two-pass classifier-free
-> guidance. The sweep still works as an exploration of the embedded-guidance
-> value, but the mechanism differs from SD3.
 
 ### 4.3 Evaluation
 
