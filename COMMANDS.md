@@ -37,7 +37,7 @@ docker run --gpus '"device=1"' -it --rm --network=host \
     his bash
 
 # A800 x 4
-gunzip -c /home/zxy_diffusion/his.tar.gz | docker load
+gunzip -c /home/his.tar.gz | docker load
 docker images | grep his
 
 cd /home/zxy_diffusion/HIS
