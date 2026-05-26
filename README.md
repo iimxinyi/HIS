@@ -11,8 +11,9 @@ Supports two diffusion backbones with parallel pipelines:
 - **Stable Diffusion 3 Medium** (`sd3-medium/`)
 - **FLUX.1-dev** (`flux.1-dev/`)
 
-Each model directory has its own entry-point scripts; everything model-agnostic
-(prompts, metrics, similarity, fitting) lives under `prompts/` and `common/`.
+Each model directory has its own entry-point scripts; everything model-agnostic (prompts, metrics, similarity, fitting) lives under `prompts/` and `common/`.
+
+![Hybrid Inference Scheme Poster](assets/poster.png)
 
 ---
 
@@ -121,8 +122,7 @@ PY
 
 ## 3. Pretrained weights and caches
 
-All caches live under `pretrained/` so they survive container restarts (via
-`-v $PWD:/workspace`).
+All caches live under `pretrained/` so they survive container restarts (via `-v $PWD:/workspace`).
 
 | Item | Path |
 |---|---|
@@ -140,10 +140,7 @@ All caches live under `pretrained/` so they survive container restarts (via
 
 ## 4. Experiments
 
-The pipeline has three phases: **generate → evaluate → aggregate → (sigmoid fit)**.
-Every generator is **resumable** — it skips outputs that already exist, so you
-can Ctrl+C and rerun without losing progress. Each `(sample, common_step)` is
-generated with 3 seeds (default `1 2 3`); metrics are averaged across seeds.
+The pipeline has three phases: **generate → evaluate → aggregate → (sigmoid fit)**. Every generator is **resumable** — it skips outputs that already exist, so you can Ctrl+C and rerun without losing progress. Each `(sample, common_step)` is generated with 3 seeds (default `1 2 3`); metrics are averaged across seeds.
 
 ### 4.1 SIM experiment
 
@@ -268,20 +265,11 @@ The sigmoid form is `y = L / (1 + exp(k * (x - x0))) + C`.
 ImageReward can be negative — that's the model expressing dislike, not a bug.
 BRISQUE can occasionally extrapolate outside [0, 100] for diffusion images that
 fall outside its natural-image training distribution; that's a property of the
-piq implementation and is left un-clamped on purpose.
+piq implementation and is left un-clamped.
 
 ---
 
 ## 6. File-naming reference
-
-Similarity (under `results/similarity/group{N}/{variant}/`):
-```
-Public{i}_Personal{j}_CommonStep{k}_Seed{s}.png      # public-anchored mode
-PAnchor{i}_POther{j}_CommonStep{k}_Seed{s}.png       # personal-anchored mode
-  i, j: prompt indices into prompts/group{N}.py
-  k:    common inference step (0..total_step-1)
-  s:    seed (default sweep {1, 2, 3}, averaged at evaluation)
-```
 
 SIM (under `results/sim/`):
 ```
@@ -292,9 +280,18 @@ Guidance_Scale={s}/scale{s}_step{k}_prompt{j}_seed{r}.png
   r: seed
 ```
 
+Similarity (under `results/similarity/group{N}/{variant}/`):
+```
+Public{i}_Personal{j}_CommonStep{k}_Seed{s}.png      # public-anchored mode
+PAnchor{i}_POther{j}_CommonStep{k}_Seed{s}.png       # personal-anchored mode
+  i, j: prompt indices into prompts/group{N}.py
+  k:    common inference step (0..total_step-1)
+  s:    seed (default sweep {1, 2, 3}, averaged at evaluation)
+```
+
 ---
 
-## 7. Adding more prompts (Group 2)
+## 7. Adding more prompts from DiffusionDB (Group 2)
 
 Open `prompts/group2.py` and fill in `public_prompts` + `personal_prompts`.
 The cost of the similarity experiment is roughly:
