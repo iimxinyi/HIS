@@ -13,6 +13,8 @@ Supports two diffusion backbones with parallel pipelines:
 
 Each model directory has its own entry-point scripts; everything model-agnostic (prompts, metrics, similarity, fitting) lives under `prompts/` and `common/`.
 
+![Hybrid Inference Scheme Poster](assets/poster.png)
+
 ---
 
 ## 1. Repository layout
