@@ -33,3 +33,8 @@ def score(image: Union[str, Image.Image], prompt: str) -> float:
     # ImageReward.score accepts either an image path (str) or a PIL.Image.
     # PIL is preferred when we already have it open.
     return float(model.score(prompt, image))
+
+
+def score_batch(images: list, prompts: list) -> list:
+    model = _load()
+    return [float(model.score(p, img)) for img, p in zip(images, prompts)]

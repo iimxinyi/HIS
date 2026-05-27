@@ -46,7 +46,9 @@ def _load(device: str | None = None, ckpt_path: str | None = None):
 
         _device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         path = ckpt_path or str(_ensure_ckpt())
+        print(f"Loading MUSIQ from {path} on {_device} ...")
         _model = MUSIQ(pretrained_model_path=path).to(_device).eval()
+        print("MUSIQ loaded")
     return _model, _device
 
 
@@ -67,3 +69,13 @@ def score(image: Union[str, Image.Image], device: str | None = None) -> float:
     tensor = _prep(image).to(dev)
     raw = model(tensor)
     return float(raw) / 100.0
+
+
+@torch.no_grad()
+def score_batch(images: list, device: str | None = None) -> list:
+    model, dev = _load(device)
+    batch = torch.cat([_prep(img) for img in images], dim=0).to(dev)
+    raw = model(batch)
+    if raw.dim() == 0:
+        return [float(raw) / 100.0]
+    return [float(r) / 100.0 for r in raw]
