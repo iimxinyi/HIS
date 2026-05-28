@@ -4,6 +4,7 @@ supplementary/
 # Experiment artefacts (potentially 10+ GB each)
 sd3-medium/results/
 flux.1-dev/results/
+final-results/
 
 # Model weights and download caches under pretrained/.
 # Track only the README that tells contributors what to drop here.
@@ -40,4 +41,4 @@ venv/
 
 # Local-only (do not sync)
 .claude/
-USAGE_CN.md
+

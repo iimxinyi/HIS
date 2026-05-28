@@ -1,23 +1,27 @@
-"""Standalone sigmoid fitter for the (sim_bin x common_step) point tables.
+"""Fit sigmoid curves per similarity column for one sheet of
+``Similarity_Fitting_Results.xlsx``.
 
-Reads an Excel produced by fit_similarity.py, fits one sigmoid per sim_bin in
-the chosen metric sheet, and writes:
-  * plot.png        : all sim_bin curves on one figure (points + fit)
-  * params.csv      : (sim_bin, L, k, x0, C) per bin
-  * curves.xlsx     : resampled curves at x_step=0.03 (one column per sim_bin)
+Input sheet layout (rows x cols):
+    Row 0:  "Common Inference Step" | sim_1 | sim_2 | ... | sim_K
+    Row N:  step_N                  | y_N_1 | y_N_2 | ... | y_N_K  (N >= 1)
 
-Default sigmoid: y = L / (1 + exp(k * (x - x0))) + C
+For each similarity column we fit y = L / (1 + exp(k * (x - x0))) + C and write
+the curve resampled at x_step (default 0.03) into a new Excel placed next to
+the input file, plus a PNG plot of points + fits.
 
-Usage:
-    # Fit CLIP curves from SD3 wSIM, group 1
-    python fit_sigmoid.py --input sd3-medium/results/fitting/group1/wSIM_points.xlsx \\
-        --metric clip --out sd3-medium/results/fitting/group1/wSIM_clip_sigmoid
+Usage (copy-paste):
 
-    # Only fit specific sim bins
-    python fit_sigmoid.py --input ... --metric clip --sim-bins 0.2 0.3 0.4 0.5 0.6 0.7
+    # === sd3-medium ===
+    python fit_sigmoid.py --input final-results/sd3-medium/SImilarity_Fitting_Results.xlsx --sheet "Alignment Dot wSIM"
+    python fit_sigmoid.py --input final-results/sd3-medium/SImilarity_Fitting_Results.xlsx --sheet "Alignment Dot woSIM"
+    python fit_sigmoid.py --input final-results/sd3-medium/SImilarity_Fitting_Results.xlsx --sheet "Fidelity Dot wSIM"
+    python fit_sigmoid.py --input final-results/sd3-medium/SImilarity_Fitting_Results.xlsx --sheet "Fidelity Dot woSIM"
 
-    # Change resample step
-    python fit_sigmoid.py --input ... --metric clip --x-step 0.05
+    # === flux.1-dev ===
+    python fit_sigmoid.py --input final-results/flux.1-dev/SImilarity_Fitting_Results.xlsx --sheet "Alignment Dot wSIM"
+    python fit_sigmoid.py --input final-results/flux.1-dev/SImilarity_Fitting_Results.xlsx --sheet "Alignment Dot woSIM"
+    python fit_sigmoid.py --input final-results/flux.1-dev/SImilarity_Fitting_Results.xlsx --sheet "Fidelity Dot wSIM"
+    python fit_sigmoid.py --input final-results/flux.1-dev/SImilarity_Fitting_Results.xlsx --sheet "Fidelity Dot woSIM"
 """
 
 import argparse
@@ -29,107 +33,123 @@ import pandas as pd
 from scipy.optimize import curve_fit
 
 
+SHEET_CHOICES = (
+    "Alignment Dot wSIM",
+    "Alignment Dot woSIM",
+    "Fidelity Dot wSIM",
+    "Fidelity Dot woSIM",
+)
+
+
 def sigmoid_func(x, L, k, x0, C):
     return L / (1 + np.exp(k * (x - x0))) + C
 
 
-def fit_one(x: np.ndarray, y: np.ndarray, initial_guess=(0.1, 0.1, 0.1, 0.1)):
-    params, _ = curve_fit(sigmoid_func, x, y, p0=initial_guess, maxfev=1_000_000)
+def initial_guess_from_data(x: np.ndarray, y: np.ndarray):
+    """Estimate (L, k, x0, C) from the data so curve_fit doesn't get stuck in
+    the flat-line local optimum.
+
+    For the paper's HIQM curve, y is monotonic in x (decreasing for alignment,
+    increasing for fidelity). We set:
+        L  = amplitude       (y_max - y_min, signed by direction)
+        C  = baseline        (the asymptote opposite the inflection)
+        x0 = inflection x    (where y is closest to its midpoint)
+        k  = slope sign / scale, derived from end-to-end slope
+    """
+    y_max, y_min = float(np.max(y)), float(np.min(y))
+    amplitude = y_max - y_min
+    if amplitude < 1e-9:
+        return (0.0, 0.1, float(np.median(x)), y_min)
+
+    # End-to-end slope tells us whether y goes up or down with x.
+    dy_dx = (y[-1] - y[0]) / (x[-1] - x[0]) if x[-1] != x[0] else 0.0
+    if dy_dx >= 0:
+        # increasing sigmoid: y -> y_min at x->-inf, y -> y_min+L at x->+inf, need k<0
+        L_init = amplitude
+        C_init = y_min
+    else:
+        # decreasing sigmoid: y -> y_min+L at x->-inf, y -> y_min at x->+inf, need k>0
+        L_init = amplitude
+        C_init = y_min
+
+    y_mid = (y_max + y_min) / 2.0
+    x0_init = float(x[np.argmin(np.abs(y - y_mid))])
+    # Slope at midpoint of L/(1+exp(k(x-x0))) + C is -L*k/4; solve for k.
+    k_init = -4.0 * dy_dx / L_init
+    return (L_init, k_init, x0_init, C_init)
+
+
+def fit_one(x: np.ndarray, y: np.ndarray):
+    p0 = initial_guess_from_data(x, y)
+    params, _ = curve_fit(sigmoid_func, x, y, p0=p0, maxfev=1_000_000)
     return params  # L, k, x0, C
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--input", required=True,
-                   help="Excel produced by fit_similarity.py (e.g. wSIM_points.xlsx)")
-    p.add_argument("--metric", required=True, choices=("clip", "image_reward", "brisque", "musiq"),
-                   help="which sheet of the input Excel to fit")
-    p.add_argument("--sim-bins", type=float, nargs="+", default=None,
-                   help="subset of sim bins to fit (default: every row in the sheet)")
+                   help="Path to SImilarity_Fitting_Results.xlsx")
+    p.add_argument("--sheet", required=True, choices=SHEET_CHOICES,
+                   help="Which sheet to fit")
     p.add_argument("--x-step", type=float, default=0.03,
-                   help="resample step for the fitted curve output (default 0.03)")
+                   help="Resample step for the fitted curve output (default 0.03)")
     p.add_argument("--x-max", type=float, default=None,
-                   help="upper x bound for the resampled curve (default: max common_step in data)")
-    p.add_argument("--out", default=None,
-                   help="output directory (default: same dir as --input, stem + '_<metric>_sigmoid')")
+                   help="Upper x bound for the resampled curve (default: max step in data)")
     args = p.parse_args()
 
     in_path = Path(args.input)
     if not in_path.exists():
         raise SystemExit(f"input not found: {in_path}")
 
-    out_dir = Path(args.out or in_path.parent / f"{in_path.stem}_{args.metric}_sigmoid")
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = in_path.parent
+    safe_sheet = args.sheet.replace(" ", "_")
+    plot_path = out_dir / f"{safe_sheet}_sigmoid_plot.png"
+    curves_path = out_dir / f"{safe_sheet}_sigmoid_curves.xlsx"
 
-    df = pd.read_excel(in_path, sheet_name=args.metric, index_col=0)
-    # df: index = sim_bin (float), columns = common_step (int), values = mean metric
+    raw = pd.read_excel(in_path, sheet_name=args.sheet, header=None)
+    sims = raw.iloc[0, 1:].astype(float).tolist()
+    x_all = raw.iloc[1:, 0].astype(float).to_numpy()
+    y_matrix = raw.iloc[1:, 1:].astype(float).to_numpy()
 
-    available_bins = [float(b) for b in df.index]
-    if args.sim_bins:
-        bins = [b for b in args.sim_bins if b in available_bins]
-        missing = [b for b in args.sim_bins if b not in available_bins]
-        if missing:
-            print(f"warning: sim_bins not in data, skipping: {missing}")
-    else:
-        bins = available_bins
-
-    if not bins:
-        raise SystemExit("no sim bins to fit")
-
-    x_all = np.array([int(c) for c in df.columns], dtype=float)
     x_min, x_max = float(x_all.min()), float(args.x_max or x_all.max())
     x_fine = np.arange(x_min, x_max + args.x_step / 2, args.x_step)
 
-    params_rows = []
-    fine_curves = pd.DataFrame({"x": x_fine})
+    fine_curves = pd.DataFrame({"common_step": x_fine})
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    colors = plt.cm.viridis(np.linspace(0, 1, len(bins)))
+    colors = plt.cm.viridis(np.linspace(0, 1, len(sims)))
 
-    for color, sim_bin in zip(colors, bins):
-        y = df.loc[sim_bin].to_numpy(dtype=float)
+    for i, (color, sim) in enumerate(zip(colors, sims)):
+        y = y_matrix[:, i]
         mask = ~np.isnan(y)
         if mask.sum() < 4:
-            print(f"skip sim_bin={sim_bin}: only {mask.sum()} data points")
+            print(f"skip sim={sim:.1f}: only {mask.sum()} data points")
             continue
         x_local = x_all[mask]
         y_local = y[mask]
         try:
             L, k, x0, C = fit_one(x_local, y_local)
         except Exception as e:
-            print(f"skip sim_bin={sim_bin}: fit failed ({e})")
+            print(f"skip sim={sim:.1f}: fit failed ({e})")
             continue
 
-        # Plot
         ax.scatter(x_local, y_local, color=color, s=30)
         y_fit_local = sigmoid_func(x_local, L, k, x0, C)
-        ax.plot(x_local, y_fit_local, color=color, alpha=0.6,
-                label=f"sim={sim_bin:.1f}")
+        ax.plot(x_local, y_fit_local, color=color, alpha=0.6, label=f"sim={sim:.1f}")
 
-        # Resampled curve
-        y_fine = sigmoid_func(x_fine, L, k, x0, C)
-        fine_curves[f"sim={sim_bin:.1f}"] = y_fine
+        fine_curves[f"sim={sim:.1f}"] = sigmoid_func(x_fine, L, k, x0, C)
+        print(f"sim={sim:.1f}: L={L:.6f} k={k:.6f} x0={x0:.6f} C={C:.6f}")
 
-        params_rows.append({"sim_bin": sim_bin, "L": L, "k": k, "x0": x0, "C": C})
-        print(f"sim_bin={sim_bin:.1f}: L={L:.6f} k={k:.6f} x0={x0:.6f} C={C:.6f}")
-
-    ax.set_xlabel("common_step")
-    ax.set_ylabel(args.metric)
-    ax.set_title(f"{args.metric} vs common_step (from {in_path.name})")
+    ax.set_xlabel("Common Inference Step")
+    ax.set_ylabel(args.sheet)
+    ax.set_title(f"{args.sheet} (from {in_path.name})")
     ax.legend(loc="best", fontsize=8)
     ax.grid(True, alpha=0.3)
-    plot_path = out_dir / "plot.png"
     fig.tight_layout()
     fig.savefig(plot_path, dpi=150)
     plt.close(fig)
     print(f"saved {plot_path}")
 
-    params_df = pd.DataFrame(params_rows)
-    params_path = out_dir / "params.csv"
-    params_df.to_csv(params_path, index=False)
-    print(f"saved {params_path}")
-
-    curves_path = out_dir / "curves.xlsx"
     fine_curves.to_excel(curves_path, index=False)
     print(f"saved {curves_path}")
 
