@@ -82,7 +82,14 @@ def initial_guess_from_data(x: np.ndarray, y: np.ndarray):
 def fit_one(x: np.ndarray, y: np.ndarray):
     p0 = initial_guess_from_data(x, y)
     params, _ = curve_fit(sigmoid_func, x, y, p0=p0, maxfev=1_000_000)
-    return params  # L, k, x0, C
+    y_pred = sigmoid_func(x, *params)
+    residuals = y - y_pred
+    mse = float(np.mean(residuals ** 2))
+    rmse = float(np.sqrt(mse))
+    ss_res = float(np.sum(residuals ** 2))
+    ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
+    return params, mse, rmse, r2  # L, k, x0, C + error metrics
 
 
 def main():
@@ -118,6 +125,7 @@ def main():
 
     fig, ax = plt.subplots(figsize=(8, 5))
     colors = plt.cm.viridis(np.linspace(0, 1, len(sims)))
+    all_mse, all_rmse, all_r2 = [], [], []
 
     for i, (color, sim) in enumerate(zip(colors, sims)):
         y = y_matrix[:, i]
@@ -128,7 +136,7 @@ def main():
         x_local = x_all[mask]
         y_local = y[mask]
         try:
-            L, k, x0, C = fit_one(x_local, y_local)
+            (L, k, x0, C), mse, rmse, r2 = fit_one(x_local, y_local)
         except Exception as e:
             print(f"skip sim={sim:.1f}: fit failed ({e})")
             continue
@@ -138,7 +146,19 @@ def main():
         ax.plot(x_local, y_fit_local, color=color, alpha=0.6, label=f"sim={sim:.1f}")
 
         fine_curves[f"sim={sim:.1f}"] = sigmoid_func(x_fine, L, k, x0, C)
-        print(f"sim={sim:.1f}: L={L:.6f} k={k:.6f} x0={x0:.6f} C={C:.6f}")
+        all_mse.append(mse)
+        all_rmse.append(rmse)
+        all_r2.append(r2)
+        print(
+            f"sim={sim:.1f}: L={L:.6f} k={k:.6f} x0={x0:.6f} C={C:.6f} "
+            f"| MSE={mse:.6e} RMSE={rmse:.6f} R2={r2:.6f}"
+        )
+
+    if all_mse:
+        print(
+            f"max over {len(all_mse)} sim(s): "
+            f"MSE={max(all_mse):.6e} RMSE={max(all_rmse):.6f} R2={max(all_r2):.6f}"
+        )
 
     ax.set_xlabel("Common Inference Step")
     ax.set_ylabel(args.sheet)
